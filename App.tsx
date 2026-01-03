@@ -170,7 +170,7 @@ const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: an
                       <p className="text-sm text-gray-500 mb-4">Fixed scope, fixed timeline, command & control. Changes are expensive and resisted.</p>
                       <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
                           <li>Detailed upfront planning</li>
-                          <li>Strict phase gates (Requirements -> Design -> Code -> Test)</li>
+                          <li>Strict phase gates (Requirements &rarr; Design &rarr; Code &rarr; Test)</li>
                           <li>Value delivered only at the end</li>
                           <li>Process-centric</li>
                       </ul>
@@ -254,17 +254,17 @@ const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: an
                                   <div className="text-xs font-bold text-gray-400">Step 1</div>
                                   <div className="font-bold text-sm">Sprint Planning</div>
                               </div>
-                              <div className="text-gray-400">→</div>
+                              <div className="text-gray-400">&rarr;</div>
                               <div className="min-w-[120px] bg-accent/10 border-2 border-accent p-3 rounded-lg text-center">
                                   <div className="text-xs font-bold text-accent">1-4 Weeks</div>
                                   <div className="font-bold text-sm">Daily Scrum</div>
                               </div>
-                              <div className="text-gray-400">→</div>
+                              <div className="text-gray-400">&rarr;</div>
                               <div className="min-w-[120px] bg-white border-2 border-gray-200 p-3 rounded-lg text-center">
                                   <div className="text-xs font-bold text-gray-400">Inspect Product</div>
                                   <div className="font-bold text-sm">Sprint Review</div>
                               </div>
-                              <div className="text-gray-400">→</div>
+                              <div className="text-gray-400">&rarr;</div>
                               <div className="min-w-[120px] bg-white border-2 border-gray-200 p-3 rounded-lg text-center">
                                   <div className="text-xs font-bold text-gray-400">Inspect Process</div>
                                   <div className="font-bold text-sm">Retrospective</div>
