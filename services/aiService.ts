@@ -1,6 +1,26 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to safely get the API KEY avoiding "process is not defined" in Vite
+const getApiKey = () => {
+  // @ts-ignore
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    // @ts-ignore
+    // Vercel/Vite requires VITE_ prefix for client-side env vars
+    return import.meta.env.VITE_API_KEY || import.meta.env.API_KEY;
+  }
+  
+  try {
+    if (process.env.API_KEY) return process.env.API_KEY;
+  } catch (e) {
+    // process is not defined
+  }
+  return '';
+};
+
+const API_KEY = getApiKey();
+
+// Initialize AI. If key is missing, it will initialize but calls will fail (better than crashing app on load)
+const ai = new GoogleGenAI({ apiKey: API_KEY || "MISSING_KEY" });
 
 const MODEL_TEXT = 'gemini-3-flash-preview';
 
