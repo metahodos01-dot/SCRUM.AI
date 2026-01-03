@@ -88,6 +88,7 @@ export interface SprintData {
   dailyMeetingDuration?: number; // Minutes, defaults to 15
   review?: string;
   retrospective?: string;
+  dailyStandups?: { dayIndex: number; remainingHours: number; timestamp: number }[];
 }
 
 // Deprecated separate interface in favor of nested SprintData
