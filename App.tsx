@@ -431,8 +431,8 @@ const ScrumFrameworkInteractive = () => {
                                 <div
                                     key={i}
                                     className={`w-36 h-24 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${placedEvent
-                                            ? (isCorrect ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400')
-                                            : 'bg-gray-50 border-gray-300 hover:border-accent'
+                                        ? (isCorrect ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400')
+                                        : 'bg-gray-50 border-gray-300 hover:border-accent'
                                         } ${placedEvent ? sprintAnimations[placedEvent.id] || '' : ''}`}
                                 >
                                     {placedEvent ? (
@@ -472,8 +472,8 @@ const ScrumFrameworkInteractive = () => {
                             <div
                                 key={q.id}
                                 className={`p-4 rounded-xl border transition-all ${isCorrect ? 'bg-green-50 border-green-300' :
-                                        isWrong ? 'bg-red-50 border-red-300' :
-                                            'bg-gray-50 border-gray-200'
+                                    isWrong ? 'bg-red-50 border-red-300' :
+                                        'bg-gray-50 border-gray-200'
                                     }`}
                             >
                                 <p className="text-gray-700 mb-3">
@@ -487,10 +487,10 @@ const ScrumFrameworkInteractive = () => {
                                             onClick={() => !valuesChecked && handleValueSelect(q.id, opt)}
                                             disabled={valuesChecked}
                                             className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${valuesAnswers[q.id] === opt
-                                                    ? (valuesChecked
-                                                        ? (opt === q.answer ? 'bg-green-500 text-white' : 'bg-red-500 text-white')
-                                                        : 'bg-accent text-white')
-                                                    : 'bg-white border border-gray-200 text-gray-600 hover:border-accent hover:text-accent'
+                                                ? (valuesChecked
+                                                    ? (opt === q.answer ? 'bg-green-500 text-white' : 'bg-red-500 text-white')
+                                                    : 'bg-accent text-white')
+                                                : 'bg-white border border-gray-200 text-gray-600 hover:border-accent hover:text-accent'
                                                 } ${valuesChecked ? 'cursor-default' : 'cursor-pointer'}`}
                                         >
                                             {opt}
@@ -711,9 +711,21 @@ const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: an
 };
 
 const PhaseVision = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
-    const [inputs, setInputs] = useState(project.phases.vision?.inputs || { name: project.name, target: '', problem: '', currentSolution: '', differentiation: '' });
+    const [inputs, setInputs] = useState(project.phases.vision?.inputs || {
+        name: project.name,
+        target: '',
+        problem: '',
+        currentSolution: '',
+        differentiation: '',
+        constraints: ''
+    });
     const [generatedVision, setGeneratedVision] = useState(project.phases.vision?.text || '');
     const [loading, setLoading] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+
+    // Risk Analysis State
+    const [risks, setRisks] = useState<any[]>(project.phases.vision?.risks || []);
+    const [loadingRisks, setLoadingRisks] = useState(false);
 
     const handleGenerate = async () => {
         setLoading(true);
@@ -724,30 +736,237 @@ const PhaseVision = ({ project, onSave }: { project: Project, onSave: (data: any
         setLoading(false);
     };
 
+    const handleAnalyzeRisks = async () => {
+        if (!generatedVision) {
+            alert("Prima genera la Vision!");
+            return;
+        }
+        setLoadingRisks(true);
+        try {
+            const prompt = `
+                Analizza i rischi per questo prodotto.
+                Vision: ${generatedVision}
+                Target: ${inputs.target}
+                Problema: ${inputs.problem}
+                Vincoli: ${inputs.constraints}
+                
+                Genera un JSON array di 4-6 rischi principali in italiano.
+                Per ogni rischio indica: impatto (Alto/Medio/Basso), categoria (Mercato/Tecnico/Risorse/Legale), e strategia di mitigazione.
+                
+                [{ "rischio": "descrizione", "impatto": "Alto", "categoria": "Mercato", "mitigazione": "strategia" }]
+            `;
+
+            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + (import.meta as any).env.VITE_API_KEY, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { responseMimeType: 'application/json' }
+                })
+            });
+            const data = await response.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+            setRisks(JSON.parse(text));
+        } catch (e) {
+            console.error(e);
+            alert("AI Error");
+        }
+        setLoadingRisks(false);
+    };
+
+    const impactColors: { [key: string]: string } = {
+        'Alto': 'bg-red-100 text-red-800 border-red-200',
+        'Medio': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        'Basso': 'bg-green-100 text-green-800 border-green-200',
+    };
+
+    const categoryIcons: { [key: string]: string } = {
+        'Mercato': '📈',
+        'Tecnico': '⚙️',
+        'Risorse': '👥',
+        'Legale': '⚖️',
+    };
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 h-[calc(100vh-140px)] overflow-y-auto pr-2 custom-scrollbar">
             <h2 className="text-3xl font-extrabold text-sidebar">2. PRODUCT VISION</h2>
-            <div className="grid grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-                    <h3 className="font-bold text-gray-700">Inputs</h3>
-                    <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Target Audience" value={inputs.target} onChange={e => setInputs({ ...inputs, target: e.target.value })} />
-                    <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Problem to Solve" value={inputs.problem} onChange={e => setInputs({ ...inputs, problem: e.target.value })} />
-                    <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Current Solution" value={inputs.currentSolution} onChange={e => setInputs({ ...inputs, currentSolution: e.target.value })} />
-                    <textarea className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Differentiation" value={inputs.differentiation} onChange={e => setInputs({ ...inputs, differentiation: e.target.value })} />
-                    <button onClick={handleGenerate} disabled={loading} className="w-full bg-sidebar text-white py-3 rounded-xl font-bold">
-                        {loading ? 'Generating...' : '✨ Generate Vision with AI'}
+
+            {/* Main Content - Wider Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                {/* Inputs Panel - 2 columns */}
+                <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-5">
+                    <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                        <span className="text-xl">📝</span> Input Dati
+                    </h3>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Target Audience</label>
+                        <textarea
+                            className="w-full border border-gray-200 p-4 rounded-xl text-gray-800 bg-gray-50 min-h-[80px] resize-y focus:ring-2 focus:ring-accent focus:border-accent transition"
+                            placeholder="Chi sono i tuoi utenti target? Descrivi il profilo, i bisogni, le caratteristiche demografiche..."
+                            value={inputs.target}
+                            onChange={e => setInputs({ ...inputs, target: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Problema da Risolvere</label>
+                        <textarea
+                            className="w-full border border-gray-200 p-4 rounded-xl text-gray-800 bg-gray-50 min-h-[100px] resize-y focus:ring-2 focus:ring-accent focus:border-accent transition"
+                            placeholder="Qual è il problema principale che il tuo prodotto risolve? Descrivi il pain point..."
+                            value={inputs.problem}
+                            onChange={e => setInputs({ ...inputs, problem: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Soluzione Attuale</label>
+                        <textarea
+                            className="w-full border border-gray-200 p-4 rounded-xl text-gray-800 bg-gray-50 min-h-[80px] resize-y focus:ring-2 focus:ring-accent focus:border-accent transition"
+                            placeholder="Come risolvono attualmente il problema i tuoi utenti? Quali alternative esistono?"
+                            value={inputs.currentSolution}
+                            onChange={e => setInputs({ ...inputs, currentSolution: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Differenziazione</label>
+                        <textarea
+                            className="w-full border border-gray-200 p-4 rounded-xl text-gray-800 bg-gray-50 min-h-[80px] resize-y focus:ring-2 focus:ring-accent focus:border-accent transition"
+                            placeholder="Cosa rende unico il tuo prodotto? Qual è il vantaggio competitivo?"
+                            value={inputs.differentiation}
+                            onChange={e => setInputs({ ...inputs, differentiation: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                            <span className="flex items-center gap-2">
+                                ⚠️ Vincoli
+                                <span className="text-[10px] normal-case font-normal text-gray-400">(Budget, tempo, tecnologie, regolamenti...)</span>
+                            </span>
+                        </label>
+                        <textarea
+                            className="w-full border border-gray-200 p-4 rounded-xl text-gray-800 bg-amber-50 min-h-[80px] resize-y focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                            placeholder="Elenca i vincoli del progetto: budget massimo, deadline, tecnologie obbligatorie, requisiti normativi..."
+                            value={inputs.constraints}
+                            onChange={e => setInputs({ ...inputs, constraints: e.target.value })}
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleGenerate}
+                        disabled={loading}
+                        className="w-full bg-gradient-to-r from-sidebar to-gray-700 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:scale-100"
+                    >
+                        {loading ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <span className="animate-spin">⏳</span> Generazione in corso...
+                            </span>
+                        ) : '✨ Genera Vision con AI'}
                     </button>
                 </div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                    <h3 className="font-bold text-gray-700 mb-2">Vision Statement (Editable)</h3>
-                    {/* Changed to Textarea for easy editing */}
-                    <textarea
-                        className="flex-1 border rounded-xl p-4 bg-gray-50 text-gray-800 min-h-[300px] font-sans"
-                        value={generatedVision}
-                        onChange={e => setGeneratedVision(e.target.value)}
-                    />
-                    <button onClick={() => onSave({ inputs, text: generatedVision })} className="mt-4 bg-accent text-white py-3 rounded-xl font-bold">Save & Continue</button>
+
+                {/* Vision Output Panel - 3 columns */}
+                <div className="lg:col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                            <span className="text-xl">🎯</span> Vision Statement
+                        </h3>
+                        <button
+                            onClick={() => setIsEditing(!isEditing)}
+                            className={`text-xs px-3 py-1 rounded-lg font-bold transition ${isEditing ? 'bg-accent text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                        >
+                            {isEditing ? '📖 Vista Formattata' : '✏️ Modifica Testo'}
+                        </button>
+                    </div>
+
+                    {isEditing ? (
+                        <textarea
+                            className="flex-1 border border-gray-200 rounded-xl p-5 bg-gray-50 text-gray-800 min-h-[400px] font-mono text-sm resize-none focus:ring-2 focus:ring-accent"
+                            value={generatedVision}
+                            onChange={e => setGeneratedVision(e.target.value)}
+                            placeholder="La vision verrà generata qui..."
+                        />
+                    ) : (
+                        <div
+                            className="flex-1 border border-gray-200 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-white text-gray-800 min-h-[400px] overflow-y-auto custom-scrollbar prose prose-lg max-w-none
+                                prose-headings:text-sidebar prose-headings:font-extrabold
+                                prose-h3:text-2xl prose-h3:border-b prose-h3:border-accent/30 prose-h3:pb-2 prose-h3:mb-4
+                                prose-p:text-gray-700 prose-p:leading-relaxed
+                                prose-strong:text-accent prose-strong:font-bold
+                                prose-ul:my-4 prose-li:text-gray-700
+                                prose-em:text-sidebar prose-em:font-medium"
+                            dangerouslySetInnerHTML={{
+                                __html: generatedVision || '<p class="text-gray-400 italic">La vision verrà generata qui dopo aver inserito i dati e cliccato il pulsante...</p>'
+                            }}
+                        />
+                    )}
+
+                    <button
+                        onClick={() => onSave({ inputs, text: generatedVision, risks })}
+                        className="mt-4 bg-accent text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all"
+                    >
+                        💾 Salva Vision e Continua
+                    </button>
                 </div>
+            </div>
+
+            {/* Risk Analysis Section */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 className="font-bold text-xl text-sidebar flex items-center gap-2">
+                            <span className="text-2xl">⚠️</span> Analisi Rischi
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-1">Identifica i potenziali rischi del prodotto e le strategie di mitigazione</p>
+                    </div>
+                    <button
+                        onClick={handleAnalyzeRisks}
+                        disabled={loadingRisks || !generatedVision}
+                        className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:scale-100"
+                    >
+                        {loadingRisks ? (
+                            <span className="flex items-center gap-2">
+                                <span className="animate-spin">⏳</span> Analisi...
+                            </span>
+                        ) : '🔍 Analizza Rischi con AI'}
+                    </button>
+                </div>
+
+                {risks.length === 0 ? (
+                    <div className="bg-gray-50 rounded-xl p-8 text-center border-2 border-dashed border-gray-200">
+                        <div className="text-4xl mb-3">🛡️</div>
+                        <p className="text-gray-500">Clicca sul pulsante per generare un'analisi dei rischi basata sulla tua Vision.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {risks.map((risk, i) => (
+                            <div
+                                key={i}
+                                className={`p-5 rounded-xl border-l-4 ${risk.impatto === 'Alto' ? 'border-l-red-500 bg-red-50' :
+                                        risk.impatto === 'Medio' ? 'border-l-yellow-500 bg-yellow-50' :
+                                            'border-l-green-500 bg-green-50'
+                                    }`}
+                            >
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xl">{categoryIcons[risk.categoria] || '📌'}</span>
+                                        <span className="text-xs font-bold uppercase text-gray-500">{risk.categoria}</span>
+                                    </div>
+                                    <span className={`text-xs font-bold px-2 py-1 rounded-full border ${impactColors[risk.impatto] || 'bg-gray-100'}`}>
+                                        {risk.impatto}
+                                    </span>
+                                </div>
+                                <h4 className="font-bold text-gray-800 mb-2">{risk.rischio}</h4>
+                                <div className="flex items-start gap-2 text-sm text-gray-600 bg-white/50 p-3 rounded-lg">
+                                    <span className="text-lg">🛡️</span>
+                                    <span><strong>Mitigazione:</strong> {risk.mitigazione}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
