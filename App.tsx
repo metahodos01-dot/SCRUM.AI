@@ -713,6 +713,8 @@ const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: an
 const PhaseVision = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     const [inputs, setInputs] = useState(project.phases.vision?.inputs || {
         name: project.name,
+        productName: '',
+        functionality: '',
         target: '',
         problem: '',
         currentSolution: '',
@@ -798,6 +800,27 @@ const PhaseVision = ({ project, onSave }: { project: Project, onSave: (data: any
                     <h3 className="font-bold text-gray-700 flex items-center gap-2">
                         <span className="text-xl">📝</span> Input Dati
                     </h3>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">🏷️ Nome del Prodotto</label>
+                        <input
+                            type="text"
+                            className="w-full border border-gray-200 p-4 rounded-xl text-gray-800 bg-blue-50 font-bold text-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="Es: ScrumAI Manager, QuickTask, Agile Coach Pro..."
+                            value={inputs.productName}
+                            onChange={e => setInputs({ ...inputs, productName: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">⚙️ Descrizione Funzionamento</label>
+                        <textarea
+                            className="w-full border border-gray-200 p-4 rounded-xl text-gray-800 bg-blue-50 min-h-[100px] resize-y focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                            placeholder="Descrivi come funziona il prodotto: le funzionalità principali, il flusso utente, le tecnologie chiave..."
+                            value={inputs.functionality}
+                            onChange={e => setInputs({ ...inputs, functionality: e.target.value })}
+                        />
+                    </div>
 
                     <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Target Audience</label>
@@ -945,8 +968,8 @@ const PhaseVision = ({ project, onSave }: { project: Project, onSave: (data: any
                             <div
                                 key={i}
                                 className={`p-5 rounded-xl border-l-4 ${risk.impatto === 'Alto' ? 'border-l-red-500 bg-red-50' :
-                                        risk.impatto === 'Medio' ? 'border-l-yellow-500 bg-yellow-50' :
-                                            'border-l-green-500 bg-green-50'
+                                    risk.impatto === 'Medio' ? 'border-l-yellow-500 bg-yellow-50' :
+                                        'border-l-green-500 bg-green-50'
                                     }`}
                             >
                                 <div className="flex justify-between items-start mb-3">
