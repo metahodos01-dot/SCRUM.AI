@@ -16,7 +16,7 @@ export interface Project {
   phases: {
     mindset?: { completed: boolean; comment: string };
     vision?: { text: string; inputs: any };
-    objectives?: { text: string; deadline: string };
+    objectives?: { text: string; deadline: string; objectives?: any[] };
     kpis?: { table: any[] };
     backlog?: { epics: Epic[] };
     team?: { members: TeamMember[] };
@@ -50,7 +50,12 @@ export interface Risk {
 export interface Epic {
   id: string;
   title: string;
+  description?: string;           // DEEP: macro-description for low-detail epics
   stories: UserStory[];
+  priority: number;               // DEEP: position priority (1 = highest)
+  tshirtSize: 'XS' | 'S' | 'M' | 'L' | 'XL';  // DEEP: rough estimate for epics
+  objectiveId?: string;           // Links to strategic objective
+  targetKpiIds?: string[];        // Links to related KPIs
 }
 
 export interface UserStory {
@@ -64,6 +69,8 @@ export interface UserStory {
   assigneeIds?: string[];
   isInSprint?: boolean;
   completedAt?: number; // Timestamp for Burndown calculation
+  priority: number;                // DEEP: priority order within epic
+  detailLevel: 'high' | 'medium' | 'low';  // DEEP: high = sprint-ready, low = future
 }
 
 export interface Impediment {

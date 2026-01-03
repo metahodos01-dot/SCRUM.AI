@@ -1407,15 +1407,24 @@ const PhaseKPIs = ({ project, onSave }: { project: Project, onSave: (data: any) 
     const [kpis, setKpis] = useState<any[]>(project.phases.kpis?.table || []);
     const [loading, setLoading] = useState(false);
 
+    // Get objectives from previous phase
+    const objectives = project.phases.objectives?.objectives || [];
+
     const handleGenerate = async () => {
-        if (!project.phases.objectives?.text) {
+        if (!project.phases.objectives?.text && objectives.length === 0) {
             alert("Please complete Objectives first.");
             return;
         }
         setLoading(true);
         try {
-            const result = await aiService.generateKPIs(project.phases.objectives.text);
-            setKpis(result);
+            const objectivesText = objectives.map((o: any) => o.title).join(', ') || project.phases.objectives?.text;
+            const result = await aiService.generateKPIs(objectivesText);
+            // Add objectiveId to each generated KPI (link to first objective by default)
+            const kpisWithObjective = result.map((kpi: any, idx: number) => ({
+                ...kpi,
+                objectiveId: objectives[idx % objectives.length]?.title || ''
+            }));
+            setKpis(kpisWithObjective);
         } catch (e) { console.error(e); alert("AI Error"); }
         setLoading(false);
     };
@@ -1426,55 +1435,147 @@ const PhaseKPIs = ({ project, onSave }: { project: Project, onSave: (data: any) 
         setKpis(newKpis);
     };
 
+    const addKpi = () => {
+        setKpis([...kpis, {
+            kpi: 'Nuovo KPI',
+            target: '',
+            metric: '%',
+            frequency: 'Mensile',
+            objectiveId: objectives[0]?.title || ''
+        }]);
+    };
+
+    const deleteKpi = (index: number) => {
+        setKpis(kpis.filter((_, i) => i !== index));
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h2 className="text-3xl font-extrabold text-sidebar">4. KEY PERFORMANCE INDICATORS</h2>
-                <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
-                    {loading ? 'Generating...' : '✨ Generate KPIs'}
-                </button>
+                <div className="flex gap-3">
+                    <button
+                        onClick={addKpi}
+                        className="bg-btn-primary hover:bg-btn-primary-hover text-white px-5 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all"
+                    >
+                        <span className="text-lg">+</span> Aggiungi KPI
+                    </button>
+                    <button
+                        onClick={handleGenerate}
+                        disabled={loading}
+                        className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm disabled:opacity-50"
+                    >
+                        {loading ? 'Generating...' : '✨ Generate KPIs'}
+                    </button>
+                </div>
             </div>
 
+            {/* Objectives Reference */}
+            {objectives.length > 0 && (
+                <div className="bg-gradient-to-r from-sidebar to-gray-800 rounded-2xl p-4 text-white">
+                    <h3 className="font-bold text-sm flex items-center gap-2 mb-3">
+                        <span>🎯</span> Obiettivi di Riferimento
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                        {objectives.map((obj: any, i: number) => (
+                            <span key={i} className="bg-white/10 px-3 py-1 rounded-full text-xs font-medium">
+                                {obj.title}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                <table className="w-full">
+                <table className="w-full table-fixed">
                     <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">KPI Name</th>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Target</th>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Metric</th>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Frequency</th>
+                            <th className="w-[30%] px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase">KPI Name</th>
+                            <th className="w-[20%] px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase">Obiettivo</th>
+                            <th className="w-[12%] px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase">Target</th>
+                            <th className="w-[12%] px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase">Metric</th>
+                            <th className="w-[14%] px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase">Frequency</th>
+                            <th className="w-[12%] px-4 py-4 text-center text-xs font-bold text-gray-500 uppercase">Azioni</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {kpis.length === 0 && (
                             <tr>
-                                <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
-                                    No KPIs generated yet. Click the button above to generate based on your objectives.
+                                <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                                    No KPIs generated yet. Click "Aggiungi KPI" or "Generate KPIs" to start.
                                 </td>
                             </tr>
                         )}
                         {kpis.map((kpi, i) => (
-                            <tr key={i}>
-                                <td className="px-6 py-4">
-                                    <input className="w-full border-0 bg-transparent text-sm font-medium text-gray-900 focus:ring-0" value={kpi.kpi} onChange={e => updateKpi(i, 'kpi', e.target.value)} />
+                            <tr key={i} className="hover:bg-gray-50 transition-colors">
+                                <td className="px-4 py-3">
+                                    <textarea
+                                        className="w-full border border-gray-200 rounded-lg bg-white text-sm font-medium text-gray-900 p-2 resize-none focus:ring-2 focus:ring-btn-primary focus:border-btn-primary min-h-[60px]"
+                                        value={kpi.kpi}
+                                        onChange={e => updateKpi(i, 'kpi', e.target.value)}
+                                        rows={2}
+                                    />
                                 </td>
-                                <td className="px-6 py-4">
-                                    <input className="w-full border-0 bg-transparent text-sm text-gray-600 focus:ring-0" value={kpi.target} onChange={e => updateKpi(i, 'target', e.target.value)} />
+                                <td className="px-4 py-3">
+                                    <select
+                                        className="w-full border border-gray-200 rounded-lg bg-white text-sm text-gray-600 p-2 focus:ring-2 focus:ring-btn-primary"
+                                        value={kpi.objectiveId || ''}
+                                        onChange={e => updateKpi(i, 'objectiveId', e.target.value)}
+                                    >
+                                        <option value="">-- Seleziona --</option>
+                                        {objectives.map((obj: any, j: number) => (
+                                            <option key={j} value={obj.title}>{obj.title}</option>
+                                        ))}
+                                    </select>
                                 </td>
-                                <td className="px-6 py-4">
-                                    <input className="w-full border-0 bg-transparent text-sm text-gray-600 focus:ring-0" value={kpi.metric} onChange={e => updateKpi(i, 'metric', e.target.value)} />
+                                <td className="px-4 py-3">
+                                    <input
+                                        className="w-full border border-gray-200 rounded-lg bg-white text-sm text-gray-600 p-2 focus:ring-2 focus:ring-btn-primary"
+                                        value={kpi.target}
+                                        onChange={e => updateKpi(i, 'target', e.target.value)}
+                                    />
                                 </td>
-                                <td className="px-6 py-4">
-                                    <input className="w-full border-0 bg-transparent text-sm text-gray-600 focus:ring-0" value={kpi.frequency} onChange={e => updateKpi(i, 'frequency', e.target.value)} />
+                                <td className="px-4 py-3">
+                                    <input
+                                        className="w-full border border-gray-200 rounded-lg bg-white text-sm text-gray-600 p-2 focus:ring-2 focus:ring-btn-primary"
+                                        value={kpi.metric}
+                                        onChange={e => updateKpi(i, 'metric', e.target.value)}
+                                    />
+                                </td>
+                                <td className="px-4 py-3">
+                                    <select
+                                        className="w-full border border-gray-200 rounded-lg bg-white text-sm text-gray-600 p-2 focus:ring-2 focus:ring-btn-primary"
+                                        value={kpi.frequency}
+                                        onChange={e => updateKpi(i, 'frequency', e.target.value)}
+                                    >
+                                        <option value="Giornaliero">Giornaliero</option>
+                                        <option value="Settimanale">Settimanale</option>
+                                        <option value="Mensile">Mensile</option>
+                                        <option value="Trimestrale">Trimestrale</option>
+                                        <option value="Annuale">Annuale</option>
+                                    </select>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                    <button
+                                        onClick={() => deleteKpi(i)}
+                                        className="bg-red-100 hover:bg-red-200 text-red-600 p-2 rounded-lg transition-colors"
+                                        title="Elimina KPI"
+                                    >
+                                        🗑️
+                                    </button>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
+
             {kpis.length > 0 && (
-                <button onClick={() => onSave({ table: kpis })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90">
-                    Save KPIs & Continue
+                <button
+                    onClick={() => onSave({ table: kpis })}
+                    className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90 transition-all"
+                >
+                    💾 Salva KPIs & Continua
                 </button>
             )}
         </div>
@@ -1484,25 +1585,50 @@ const PhaseKPIs = ({ project, onSave }: { project: Project, onSave: (data: any) 
 const PhaseBacklog = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     const [epics, setEpics] = useState<Epic[]>(project.phases.backlog?.epics || []);
     const [loading, setLoading] = useState(false);
+    const [showConfirmRegenerate, setShowConfirmRegenerate] = useState(false);
 
-    const handleGenerate = async () => {
+    // Get objectives and KPIs for AI context
+    const objectives = project.phases.objectives?.objectives || [];
+    const kpis = project.phases.kpis?.table || [];
+
+    const handleGenerate = async (isRegenerate: boolean = false) => {
+        if (isRegenerate && epics.length > 0) {
+            setShowConfirmRegenerate(true);
+            return;
+        }
+        await doGenerate();
+    };
+
+    const doGenerate = async () => {
         setLoading(true);
+        setShowConfirmRegenerate(false);
         try {
-            const result = await aiService.generateBacklog(project.phases.vision?.text || '', project.phases.objectives?.text || '');
-            // Transform simple JSON to typed Epics
-            const newEpics = result.map((e: any, i: number) => ({
+            const result = await aiService.generateBacklog(
+                project.phases.vision?.text || '',
+                objectives,
+                kpis
+            );
+            // Transform AI result to typed Epics with DEEP fields
+            const newEpics: Epic[] = result.map((e: any, i: number) => ({
                 id: `epic-${Date.now()}-${i}`,
                 title: e.title,
-                stories: e.stories.map((s: any, j: number) => ({
+                description: e.description || '',
+                priority: e.priority || i + 1,
+                tshirtSize: e.tshirtSize || 'M',
+                objectiveId: objectives[e.objectiveIndex]?.title ? `obj-${e.objectiveIndex}` : undefined,
+                targetKpiIds: [],
+                stories: (e.stories || []).map((s: any, j: number) => ({
                     id: `story-${Date.now()}-${i}-${j}`,
                     title: s.title,
                     description: s.description,
-                    acceptanceCriteria: s.acceptanceCriteria,
+                    acceptanceCriteria: s.acceptanceCriteria || [],
                     storyPoints: 0,
                     estimatedHours: 0,
-                    status: 'todo',
+                    status: 'todo' as const,
                     isInSprint: false,
-                    assigneeIds: []
+                    assigneeIds: [],
+                    priority: s.priority || j + 1,
+                    detailLevel: s.detailLevel || 'medium' as const
                 }))
             }));
             setEpics(newEpics);
@@ -1510,69 +1636,371 @@ const PhaseBacklog = ({ project, onSave }: { project: Project, onSave: (data: an
         setLoading(false);
     };
 
-    const updateEpicTitle = (index: number, val: string) => {
+    // CRUD Operations
+    const updateEpic = (index: number, field: string, value: any) => {
         const newEpics = [...epics];
-        newEpics[index].title = val;
+        (newEpics[index] as any)[field] = value;
         setEpics(newEpics);
-    }
+    };
+
+    const deleteEpic = (index: number) => {
+        if (confirm('Eliminare questo Epic e tutte le sue User Stories?')) {
+            setEpics(epics.filter((_, i) => i !== index));
+        }
+    };
+
+    const addEpic = () => {
+        const newEpic: Epic = {
+            id: `epic-${Date.now()}`,
+            title: 'Nuovo Epic',
+            description: '',
+            priority: epics.length + 1,
+            tshirtSize: 'M',
+            stories: []
+        };
+        setEpics([...epics, newEpic]);
+    };
 
     const updateStory = (epicIndex: number, storyIndex: number, field: string, val: any) => {
         const newEpics = [...epics];
         (newEpics[epicIndex].stories[storyIndex] as any)[field] = val;
         setEpics(newEpics);
-    }
+    };
+
+    const deleteStory = (epicIndex: number, storyIndex: number) => {
+        const newEpics = [...epics];
+        newEpics[epicIndex].stories = newEpics[epicIndex].stories.filter((_, i) => i !== storyIndex);
+        setEpics(newEpics);
+    };
+
+    const addStory = (epicIndex: number) => {
+        const newEpics = [...epics];
+        const newStory = {
+            id: `story-${Date.now()}`,
+            title: 'As a user, I want...',
+            description: '',
+            acceptanceCriteria: [],
+            storyPoints: 0,
+            estimatedHours: 0,
+            status: 'todo' as const,
+            isInSprint: false,
+            assigneeIds: [],
+            priority: newEpics[epicIndex].stories.length + 1,
+            detailLevel: 'medium' as const
+        };
+        newEpics[epicIndex].stories.push(newStory);
+        setEpics(newEpics);
+    };
+
+    const addAcceptanceCriteria = (epicIndex: number, storyIndex: number) => {
+        const newEpics = [...epics];
+        newEpics[epicIndex].stories[storyIndex].acceptanceCriteria.push('Nuovo criterio...');
+        setEpics(newEpics);
+    };
+
+    const updateAcceptanceCriteria = (epicIndex: number, storyIndex: number, acIndex: number, value: string) => {
+        const newEpics = [...epics];
+        newEpics[epicIndex].stories[storyIndex].acceptanceCriteria[acIndex] = value;
+        setEpics(newEpics);
+    };
+
+    const deleteAcceptanceCriteria = (epicIndex: number, storyIndex: number, acIndex: number) => {
+        const newEpics = [...epics];
+        newEpics[epicIndex].stories[storyIndex].acceptanceCriteria =
+            newEpics[epicIndex].stories[storyIndex].acceptanceCriteria.filter((_, i) => i !== acIndex);
+        setEpics(newEpics);
+    };
+
+    // T-shirt size colors
+    const tshirtColors: Record<string, string> = {
+        'XS': 'bg-green-100 text-green-700 border-green-200',
+        'S': 'bg-blue-100 text-blue-700 border-blue-200',
+        'M': 'bg-yellow-100 text-yellow-700 border-yellow-200',
+        'L': 'bg-orange-100 text-orange-700 border-orange-200',
+        'XL': 'bg-red-100 text-red-700 border-red-200'
+    };
+
+    // Detail level badges
+    const detailLevelBadges: Record<string, { color: string; label: string }> = {
+        'high': { color: 'bg-green-500', label: '🎯 Sprint-Ready' },
+        'medium': { color: 'bg-yellow-500', label: '📋 In Refinement' },
+        'low': { color: 'bg-gray-400', label: '💭 Future Idea' }
+    };
+
+    // Sort epics by priority
+    const sortedEpics = [...epics].sort((a, b) => a.priority - b.priority);
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-extrabold text-sidebar">5. PRODUCT BACKLOG</h2>
-                <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
-                    {loading ? 'Generating...' : '✨ Generate Backlog'}
-                </button>
+        <div className="space-y-6 h-[calc(100vh-140px)] overflow-y-auto pr-2">
+            {/* Header */}
+            <div className="flex justify-between items-center sticky top-0 bg-white z-10 py-2">
+                <div>
+                    <h2 className="text-3xl font-extrabold text-sidebar">5. PRODUCT BACKLOG</h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Gestione backlog con criteri DEEP: Dettagliato, Emergente, Stimato, Prioritizzato
+                    </p>
+                </div>
+                <div className="flex gap-3">
+                    <button
+                        onClick={addEpic}
+                        className="bg-white border-2 border-accent text-accent px-4 py-2 rounded-xl font-bold text-sm hover:bg-accent hover:text-white transition-all"
+                    >
+                        + Aggiungi Epic
+                    </button>
+                    {epics.length > 0 && (
+                        <button
+                            onClick={() => handleGenerate(true)}
+                            disabled={loading}
+                            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-bold text-sm hover:bg-gray-200 transition-all"
+                        >
+                            🔄 Rigenera
+                        </button>
+                    )}
+                    <button
+                        onClick={() => handleGenerate(false)}
+                        disabled={loading}
+                        className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-opacity-90 transition-all"
+                    >
+                        {loading ? (
+                            <span className="flex items-center gap-2">
+                                <span className="animate-spin">⏳</span> Generazione...
+                            </span>
+                        ) : '✨ Genera Backlog AI'}
+                    </button>
+                </div>
             </div>
 
-            <div className="space-y-4">
-                {epics.map((epic, i) => (
-                    <div key={epic.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                            <input
-                                className="font-bold text-lg text-sidebar bg-transparent border-0 focus:ring-0 w-full"
-                                value={epic.title}
-                                onChange={e => updateEpicTitle(i, e.target.value)}
-                            />
-                            <span className="text-xs font-bold text-gray-400 bg-white px-2 py-1 rounded border">{epic.stories.length} Stories</span>
-                        </div>
-                        <div className="divide-y divide-gray-100">
-                            {epic.stories.map((story, j) => (
-                                <div key={story.id} className="p-6 hover:bg-gray-50 transition">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <input
-                                            className="font-bold text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-accent w-full mr-4"
-                                            value={story.title}
-                                            onChange={e => updateStory(i, j, 'title', e.target.value)}
-                                        />
-                                        <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded shrink-0">SP: {story.storyPoints}</span>
-                                    </div>
-                                    <textarea
-                                        className="w-full text-sm text-gray-600 mb-3 bg-transparent border border-transparent hover:border-gray-200 rounded p-1"
-                                        value={story.description}
-                                        onChange={e => updateStory(i, j, 'description', e.target.value)}
-                                    />
-                                    <div className="bg-blue-50 p-3 rounded-lg">
-                                        <p className="text-xs font-bold text-blue-800 mb-1">Acceptance Criteria:</p>
-                                        <ul className="list-disc pl-4 text-xs text-blue-700">
-                                            {story.acceptanceCriteria.map((ac, k) => <li key={k}>{ac}</li>)}
-                                        </ul>
-                                    </div>
-                                </div>
-                            ))}
+            {/* Regenerate Confirmation Modal */}
+            {showConfirmRegenerate && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl p-6 max-w-md shadow-xl">
+                        <h3 className="text-xl font-bold text-sidebar mb-3">⚠️ Rigenerare il Backlog?</h3>
+                        <p className="text-gray-600 mb-6">
+                            Questa azione sostituirà tutti gli Epic e le User Stories esistenti con una nuova generazione AI.
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setShowConfirmRegenerate(false)}
+                                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 font-bold hover:bg-gray-50"
+                            >
+                                Annulla
+                            </button>
+                            <button
+                                onClick={doGenerate}
+                                className="px-4 py-2 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600"
+                            >
+                                🔄 Sì, Rigenera
+                            </button>
                         </div>
                     </div>
-                ))}
+                </div>
+            )}
+
+            {/* DEEP Legend */}
+            <div className="bg-gradient-to-r from-sidebar to-gray-800 rounded-xl p-4 text-white">
+                <div className="flex items-center gap-6 text-sm">
+                    <span className="font-bold">DEEP:</span>
+                    <span className="flex items-center gap-1">📊 <strong>D</strong>etailed Appropriately</span>
+                    <span className="flex items-center gap-1">🔄 <strong>E</strong>mergent</span>
+                    <span className="flex items-center gap-1">📐 <strong>E</strong>stimated</span>
+                    <span className="flex items-center gap-1">🎯 <strong>P</strong>rioritized</span>
+                </div>
             </div>
+
+            {/* Empty state */}
+            {epics.length === 0 && (
+                <div className="bg-gray-50 rounded-2xl p-12 text-center border-2 border-dashed border-gray-200">
+                    <div className="text-6xl mb-4">📋</div>
+                    <h3 className="text-xl font-bold text-gray-700 mb-2">Nessun Backlog Generato</h3>
+                    <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                        Clicca "✨ Genera Backlog AI" per creare automaticamente Epic e User Stories basate sulla tua Vision, Obiettivi e KPI.
+                    </p>
+                    <button
+                        onClick={() => handleGenerate(false)}
+                        disabled={loading}
+                        className="bg-accent text-white px-8 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all"
+                    >
+                        ✨ Genera il tuo Backlog
+                    </button>
+                </div>
+            )}
+
+            {/* Epics List */}
+            <div className="space-y-4">
+                {sortedEpics.map((epic, i) => {
+                    const originalIndex = epics.findIndex(e => e.id === epic.id);
+                    return (
+                        <div key={epic.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                            {/* Epic Header */}
+                            <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-4 border-b border-gray-100">
+                                <div className="flex items-center gap-3 mb-2">
+                                    {/* Priority Badge */}
+                                    <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${epic.priority <= 2 ? 'bg-red-500 text-white' :
+                                            epic.priority <= 4 ? 'bg-yellow-500 text-white' :
+                                                'bg-gray-400 text-white'
+                                        }`}>
+                                        {epic.priority}
+                                    </span>
+
+                                    {/* Epic Title */}
+                                    <input
+                                        className="font-bold text-lg text-sidebar bg-transparent border-b border-transparent hover:border-gray-300 focus:border-accent flex-1 transition-all"
+                                        value={epic.title}
+                                        onChange={e => updateEpic(originalIndex, 'title', e.target.value)}
+                                        placeholder="Titolo Epic..."
+                                    />
+
+                                    {/* T-shirt Size Selector */}
+                                    <select
+                                        value={epic.tshirtSize}
+                                        onChange={e => updateEpic(originalIndex, 'tshirtSize', e.target.value)}
+                                        className={`text-xs font-bold px-3 py-1.5 rounded-full border ${tshirtColors[epic.tshirtSize]} cursor-pointer`}
+                                    >
+                                        <option value="XS">XS</option>
+                                        <option value="S">S</option>
+                                        <option value="M">M</option>
+                                        <option value="L">L</option>
+                                        <option value="XL">XL</option>
+                                    </select>
+
+                                    {/* Stories Count */}
+                                    <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                                        {epic.stories.length} Stories
+                                    </span>
+
+                                    {/* Delete Epic */}
+                                    <button
+                                        onClick={() => deleteEpic(originalIndex)}
+                                        className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                                        title="Elimina Epic"
+                                    >
+                                        🗑️
+                                    </button>
+                                </div>
+
+                                {/* Epic Description */}
+                                <input
+                                    className="w-full text-sm text-gray-500 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-accent transition-all"
+                                    value={epic.description || ''}
+                                    onChange={e => updateEpic(originalIndex, 'description', e.target.value)}
+                                    placeholder="Descrizione dell'Epic (opzionale)..."
+                                />
+                            </div>
+
+                            {/* Stories */}
+                            <div className="divide-y divide-gray-100">
+                                {epic.stories.map((story, j) => (
+                                    <div key={story.id} className="p-6 hover:bg-gray-50/50 transition group">
+                                        <div className="flex items-start gap-3 mb-3">
+                                            {/* Story Priority */}
+                                            <span className="text-xs font-bold text-gray-400 bg-gray-100 w-6 h-6 rounded flex items-center justify-center shrink-0">
+                                                {j + 1}
+                                            </span>
+
+                                            {/* Story Title */}
+                                            <input
+                                                className="font-bold text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-accent flex-1 transition-all"
+                                                value={story.title}
+                                                onChange={e => updateStory(originalIndex, j, 'title', e.target.value)}
+                                                placeholder="As a... I want... So that..."
+                                            />
+
+                                            {/* Detail Level Badge */}
+                                            <select
+                                                value={story.detailLevel || 'medium'}
+                                                onChange={e => updateStory(originalIndex, j, 'detailLevel', e.target.value)}
+                                                className={`text-[10px] font-bold px-2 py-1 rounded-full ${story.detailLevel === 'high' ? 'bg-green-100 text-green-700' :
+                                                        story.detailLevel === 'low' ? 'bg-gray-100 text-gray-500' :
+                                                            'bg-yellow-100 text-yellow-700'
+                                                    }`}
+                                            >
+                                                <option value="high">🎯 Sprint-Ready</option>
+                                                <option value="medium">📋 In Refinement</option>
+                                                <option value="low">💭 Future</option>
+                                            </select>
+
+                                            {/* Story Points */}
+                                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded shrink-0">
+                                                SP: {story.storyPoints}
+                                            </span>
+
+                                            {/* Delete Story */}
+                                            <button
+                                                onClick={() => deleteStory(originalIndex, j)}
+                                                className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                title="Elimina Story"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+
+                                        {/* Story Description */}
+                                        <textarea
+                                            className="w-full text-sm text-gray-600 mb-3 bg-transparent border border-transparent hover:border-gray-200 focus:border-accent rounded p-2 resize-none transition-all"
+                                            value={story.description}
+                                            onChange={e => updateStory(originalIndex, j, 'description', e.target.value)}
+                                            placeholder="Descrizione dettagliata..."
+                                            rows={2}
+                                        />
+
+                                        {/* Acceptance Criteria */}
+                                        <div className="bg-blue-50 p-3 rounded-lg">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <p className="text-xs font-bold text-blue-800">Acceptance Criteria:</p>
+                                                <button
+                                                    onClick={() => addAcceptanceCriteria(originalIndex, j)}
+                                                    className="text-xs text-blue-600 hover:text-blue-800 font-bold"
+                                                >
+                                                    + Aggiungi
+                                                </button>
+                                            </div>
+                                            <ul className="space-y-1">
+                                                {story.acceptanceCriteria.map((ac, k) => (
+                                                    <li key={k} className="flex items-center gap-2 group/ac">
+                                                        <span className="text-blue-400">•</span>
+                                                        <input
+                                                            className="flex-1 text-xs text-blue-700 bg-transparent border-b border-transparent hover:border-blue-300 focus:border-blue-500"
+                                                            value={ac}
+                                                            onChange={e => updateAcceptanceCriteria(originalIndex, j, k, e.target.value)}
+                                                        />
+                                                        <button
+                                                            onClick={() => deleteAcceptanceCriteria(originalIndex, j, k)}
+                                                            className="text-blue-300 hover:text-red-500 opacity-0 group-hover/ac:opacity-100 text-xs"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                                {story.acceptanceCriteria.length === 0 && (
+                                                    <li className="text-xs text-blue-400 italic">Nessun criterio definito</li>
+                                                )}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Add Story Button */}
+                            <div className="px-6 py-3 bg-gray-50 border-t border-gray-100">
+                                <button
+                                    onClick={() => addStory(originalIndex)}
+                                    className="text-sm text-gray-500 hover:text-accent font-medium transition-colors"
+                                >
+                                    + Aggiungi User Story
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Save Button */}
             {epics.length > 0 && (
-                <button onClick={() => onSave({ epics })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90">
-                    Save Backlog & Continue
+                <button
+                    onClick={() => onSave({ epics })}
+                    className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90 transition-all sticky bottom-0"
+                >
+                    💾 Salva Backlog & Continua
                 </button>
             )}
         </div>

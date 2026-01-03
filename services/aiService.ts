@@ -84,25 +84,64 @@ export const aiService = {
     return JSON.parse(response.text || '[]');
   },
 
-  async generateBacklog(vision: string, objectives: string) {
+  async generateBacklog(vision: string, objectives: any[], kpis: any[]) {
+    // Build context from objectives and KPIs
+    const objectivesContext = objectives.map((o, i) =>
+      `Obiettivo ${i + 1}: "${o.title}" - ${o.description || ''}`
+    ).join('\n');
+
+    const kpisContext = kpis.map(k =>
+      `KPI: "${k.kpi}" - Target: ${k.target} ${k.metric}`
+    ).join('\n');
+
     const prompt = `
-      Act as a Product Owner. Create a Backlog based on Vision: ${vision} and Objectives: ${objectives}.
-      Generate exactly 5 Epics. For each Epic, generate 3 User Stories.
+      Act as an expert Product Owner applying DEEP criteria for Product Backlog management.
+      
+      Create a prioritized Product Backlog based on:
+      
+      PRODUCT VISION:
+      ${vision}
+      
+      STRATEGIC OBJECTIVES:
+      ${objectivesContext || 'No specific objectives provided'}
+      
+      KPIs & TARGETS:
+      ${kpisContext || 'No KPIs defined yet'}
+      
+      DEEP CRITERIA TO APPLY:
+      1. DETAILED APPROPRIATELY: Top-priority items must have detailed user stories with clear acceptance criteria. Lower-priority epics can be high-level themes.
+      2. EMERGENT: Structure the backlog to be easily modified and evolved.
+      3. ESTIMATED: Assign T-shirt sizes (XS, S, M, L, XL) to each Epic based on effort.
+      4. PRIORITIZED: Strict priority order based on business value, risk mitigation, and technical dependencies.
+      
+      Generate 5 Epics ordered by priority (1 = highest). For high-priority epics (1-2), generate 3-4 detailed stories. For lower-priority epics (3-5), generate 1-2 less detailed stories.
       
       Output JSON format:
       [
         {
           "title": "Epic Title",
+          "description": "High-level description of the epic goal",
+          "priority": 1,
+          "tshirtSize": "M",
+          "objectiveIndex": 0,
           "stories": [
             {
-              "title": "As a... I want... So that...",
-              "description": "Detailed description...",
-              "acceptanceCriteria": ["Criteria 1", "Criteria 2"]
+              "title": "As a [user], I want [feature], so that [benefit]",
+              "description": "Detailed description of what needs to be done",
+              "acceptanceCriteria": ["Given... When... Then...", "Criteria 2"],
+              "detailLevel": "high",
+              "priority": 1
             }
           ]
         }
       ]
+      
+      IMPORTANT: 
+      - objectiveIndex should be the 0-based index of the related objective, or null if not linked
+      - detailLevel should be "high" for top-priority stories (sprint-ready), "medium" for moderately defined, "low" for future work
+      - Priority within stories should be unique per epic (1, 2, 3...)
     `;
+
     const response = await ai.models.generateContent({
       model: MODEL_TEXT,
       contents: prompt,
