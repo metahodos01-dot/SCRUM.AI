@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
-import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { Project, User, Epic, UserStory, TeamMember, Impediment } from './types';
@@ -16,15 +16,20 @@ import {
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuthAction = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      if (isRegistering) {
+        await createUserWithEmailAndPassword(auth, email, password);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
       navigate('/projects');
     } catch (error) {
-      alert("Login failed: " + (error as any).message);
+      alert((isRegistering ? "Registration failed: " : "Login failed: ") + (error as any).message);
     }
   };
 
@@ -32,7 +37,7 @@ const Login = () => {
     <div className="flex items-center justify-center h-screen bg-sidebar">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
         <h1 className="text-2xl font-extrabold text-sidebar mb-6 text-center">SCRUM AI MANAGER</h1>
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleAuthAction} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Email</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-accent focus:border-accent text-gray-900 bg-white" required />
@@ -41,11 +46,26 @@ const Login = () => {
             <label className="block text-sm font-medium text-gray-700">Password</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-accent focus:border-accent text-gray-900 bg-white" required />
           </div>
-          <button type="submit" className="w-full bg-accent text-white py-2 rounded-xl font-bold hover:bg-opacity-90 transition">Login</button>
+          <button type="submit" className="w-full bg-accent text-white py-2 rounded-xl font-bold hover:bg-opacity-90 transition">
+            {isRegistering ? 'Sign Up' : 'Login'}
+          </button>
         </form>
-        <div className="mt-4 text-xs text-gray-400 text-center">
-          Use admin credentials provided in documentation.
+        
+        <div className="mt-4 text-center">
+            <button 
+                type="button" 
+                onClick={() => setIsRegistering(!isRegistering)}
+                className="text-sm text-gray-500 hover:text-accent font-medium underline"
+            >
+                {isRegistering ? "Already have an account? Login" : "No account? Create one"}
+            </button>
         </div>
+
+        {!isRegistering && (
+            <div className="mt-4 text-xs text-gray-400 text-center">
+            Use admin credentials provided in documentation or create a new account.
+            </div>
+        )}
       </div>
     </div>
   );
