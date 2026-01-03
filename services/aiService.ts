@@ -166,19 +166,101 @@ export const aiService = {
     return JSON.parse(response.text || '[]');
   },
 
-  async generateTeamRecommendations(vision: string) {
+  async suggestTeam(vision: string, epics: any[], projectComplexity: 'low' | 'medium' | 'high' = 'medium') {
+    const epicsSummary = epics.map(e => `${e.title} (${e.tshirtSize || 'M'})`).join(', ');
     const prompt = `
-      Based on this vision: "${vision}", recommend a Scrum Team structure.
-      Generate 3-5 roles needed.
+      Act as an Agile HR Expert. Based on this project context, suggest an ideal Scrum Team.
+      
+      Vision: "${vision}"
+      Epics: ${epicsSummary}
+      Project Complexity: ${projectComplexity}
+      
+      Generate 4-6 team members with realistic Italian names.
+      Roles allowed: PO, SM, Dev, Designer, QA, Other
+      
+      For each member, suggest:
+      - name: Full Italian name
+      - role: One of PO, SM, Dev, Designer, QA, Other
+      - skills: Array of 3-5 relevant skills
+      - hoursPerWeek: 20-40 based on role type
+      - availability: 70-100 (percentage)
+      - aiComfortLevel: 1-5 (self-assessed AI fluency)
+      
       Output JSON array:
-      [{ "role": "Senior Frontend", "skills": ["React", "Typescript"] }]
+      [{ 
+        "name": "Marco Rossi", 
+        "role": "Dev", 
+        "skills": ["React", "TypeScript", "Node.js"], 
+        "hoursPerWeek": 40, 
+        "availability": 100, 
+        "aiComfortLevel": 4 
+      }]
     `;
     const response = await ai.models.generateContent({
       model: MODEL_TEXT,
       contents: prompt,
       config: { responseMimeType: 'application/json' }
     });
-    return JSON.parse(response.text || '[]');
+    const members = JSON.parse(response.text || '[]');
+
+    // Add IDs and avatar colors
+    const colors = ['#FF5A6E', '#4ADE80', '#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899'];
+    return members.map((m: any, i: number) => ({
+      ...m,
+      id: `member-${Date.now()}-${i}`,
+      avatarColor: colors[i % colors.length]
+    }));
+  },
+
+  async analyzeTeamHealth(teamData: { members: any[], activities: any[], sprintData: any }) {
+    // Simulate health metrics calculation (in real app, this would analyze real data)
+    const memberCount = teamData.members?.length || 0;
+    const avgAiComfort = memberCount > 0
+      ? teamData.members.reduce((sum: number, m: any) => sum + (m.aiComfortLevel || 3), 0) / memberCount
+      : 3;
+
+    // Calculate cross-functionality (skill diversity)
+    const allSkills = teamData.members?.flatMap((m: any) => m.skills || []) || [];
+    const uniqueSkills = new Set(allSkills);
+    const skillDiversity = uniqueSkills.size / Math.max(allSkills.length, 1);
+
+    return {
+      psychologicalSafety: {
+        value: 75 + Math.floor(Math.random() * 20), // Simulated
+        trend: 'stable' as const,
+        alerts: []
+      },
+      strategicAlignment: {
+        value: 60 + Math.floor(Math.random() * 25),
+        trend: 'up' as const,
+        alerts: []
+      },
+      crossFunctionality: {
+        value: Math.min(100, Math.floor(skillDiversity * 100 + 30)),
+        trend: skillDiversity > 0.3 ? 'stable' as const : 'down' as const,
+        alerts: skillDiversity < 0.3 ? [{
+          id: `alert-crossfunc-${Date.now()}`,
+          severity: 'warning' as const,
+          pillar: 'crossFunctionality' as const,
+          title: 'Potenziale Collo di Bottiglia',
+          description: 'Alcune skill sono concentrate in pochi membri del team.',
+          suggestedAction: 'Considera sessioni di pair programming per trasferire competenze.'
+        }] : []
+      },
+      aiFluency: {
+        value: Math.floor(avgAiComfort * 20),
+        trend: avgAiComfort > 3 ? 'up' as const : 'down' as const,
+        alerts: avgAiComfort < 3 ? [{
+          id: `alert-ai-${Date.now()}`,
+          severity: 'warning' as const,
+          pillar: 'aiFluency' as const,
+          title: 'Bassa Adozione AI',
+          description: 'Il team ha un basso livello di comfort con gli strumenti AI.',
+          suggestedAction: 'Organizza un training session sull\'uso degli strumenti AI della piattaforma.'
+        }] : []
+      },
+      lastUpdated: Date.now()
+    };
   },
 
   async generateRoadmap(vision: string, epics: any[]) {

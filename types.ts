@@ -30,8 +30,37 @@ export interface Project {
 export interface TeamMember {
   id: string;
   name: string;
-  role: string;
+  role: 'PO' | 'SM' | 'Dev' | 'Designer' | 'QA' | 'Other';
   skills: string[];
+  hoursPerWeek: number;
+  availability: number; // 0-100%
+  aiComfortLevel: 1 | 2 | 3 | 4 | 5;
+  avatarColor: string;
+}
+
+// Team Health Monitor Types
+export interface TeamHealthMetrics {
+  psychologicalSafety: HealthScore;
+  strategicAlignment: HealthScore;
+  crossFunctionality: HealthScore;
+  aiFluency: HealthScore;
+  lastUpdated: number;
+}
+
+export interface HealthScore {
+  value: number; // 0-100
+  trend: 'up' | 'down' | 'stable';
+  alerts: HealthAlert[];
+}
+
+export interface HealthAlert {
+  id: string;
+  severity: 'info' | 'warning' | 'critical';
+  pillar: 'psychologicalSafety' | 'strategicAlignment' | 'crossFunctionality' | 'aiFluency';
+  title: string;
+  description: string;
+  suggestedAction: string;
+  dismissedUntil?: number;
 }
 
 export interface RoadmapItem {

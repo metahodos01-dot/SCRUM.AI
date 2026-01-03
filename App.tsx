@@ -1836,8 +1836,8 @@ const PhaseBacklog = ({ project, onSave }: { project: Project, onSave: (data: an
                                 <div className="flex items-center gap-3 mb-2">
                                     {/* Priority Badge */}
                                     <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${epic.priority <= 2 ? 'bg-red-500 text-white' :
-                                            epic.priority <= 4 ? 'bg-yellow-500 text-white' :
-                                                'bg-gray-400 text-white'
+                                        epic.priority <= 4 ? 'bg-yellow-500 text-white' :
+                                            'bg-gray-400 text-white'
                                         }`}>
                                         {epic.priority}
                                     </span>
@@ -1910,8 +1910,8 @@ const PhaseBacklog = ({ project, onSave }: { project: Project, onSave: (data: an
                                                 value={story.detailLevel || 'medium'}
                                                 onChange={e => updateStory(originalIndex, j, 'detailLevel', e.target.value)}
                                                 className={`text-[10px] font-bold px-2 py-1 rounded-full ${story.detailLevel === 'high' ? 'bg-green-100 text-green-700' :
-                                                        story.detailLevel === 'low' ? 'bg-gray-100 text-gray-500' :
-                                                            'bg-yellow-100 text-yellow-700'
+                                                    story.detailLevel === 'low' ? 'bg-gray-100 text-gray-500' :
+                                                        'bg-yellow-100 text-yellow-700'
                                                     }`}
                                             >
                                                 <option value="high">🎯 Sprint-Ready</option>
@@ -2010,82 +2010,384 @@ const PhaseBacklog = ({ project, onSave }: { project: Project, onSave: (data: an
 const PhaseTeam = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     const [members, setMembers] = useState<TeamMember[]>(project.phases.team?.members || []);
     const [loading, setLoading] = useState(false);
-    const [newMemberName, setNewMemberName] = useState('');
-    const [newMemberRole, setNewMemberRole] = useState('');
+    const [healthMetrics, setHealthMetrics] = useState<any>(null);
+    const [expandedMember, setExpandedMember] = useState<string | null>(null);
+    const [showAddForm, setShowAddForm] = useState(false);
 
-    const handleGenerate = async () => {
+    // Calculate health metrics when members change
+    useEffect(() => {
+        if (members.length > 0) {
+            aiService.analyzeTeamHealth({
+                members,
+                activities: [],
+                sprintData: project.phases.sprint
+            }).then(setHealthMetrics);
+        }
+    }, [members]);
+
+    const handleSuggestTeam = async () => {
         setLoading(true);
         try {
-            const result = await aiService.generateTeamRecommendations(project.phases.vision?.text || '');
-            const newMembers = result.map((r: any, i: number) => ({
-                id: `member-${Date.now()}-${i}`,
-                name: `Candidate ${i + 1}`,
-                role: r.role,
-                skills: r.skills,
-                email: 'pending@hire.com'
-            }));
-            setMembers([...members, ...newMembers]);
-        } catch (e) { alert("AI Error"); }
+            const epics = project.phases.backlog?.epics || [];
+            const suggested = await aiService.suggestTeam(
+                project.phases.vision?.text || '',
+                epics,
+                'medium'
+            );
+            setMembers([...members, ...suggested]);
+        } catch (e) {
+            console.error(e);
+            alert("AI Error");
+        }
         setLoading(false);
     };
 
     const addMember = () => {
-        if (!newMemberName || !newMemberRole) return;
-        setMembers([...members, {
+        const colors = ['#FF5A6E', '#4ADE80', '#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899'];
+        const newMember: TeamMember = {
             id: `member-${Date.now()}`,
-            name: newMemberName,
-            role: newMemberRole,
+            name: 'Nuovo Membro',
+            role: 'Dev',
             skills: [],
-            email: ''
-        }]);
-        setNewMemberName('');
-        setNewMemberRole('');
+            hoursPerWeek: 40,
+            availability: 100,
+            aiComfortLevel: 3,
+            avatarColor: colors[members.length % colors.length]
+        };
+        setMembers([...members, newMember]);
+        setExpandedMember(newMember.id);
+        setShowAddForm(false);
     };
 
-    const updateMember = (id: string, field: string, val: string) => {
+    const updateMember = (id: string, field: string, val: any) => {
         setMembers(members.map(m => m.id === id ? { ...m, [field]: val } : m));
-    }
+    };
+
+    const deleteMember = (id: string) => {
+        if (confirm('Eliminare questo membro del team?')) {
+            setMembers(members.filter(m => m.id !== id));
+        }
+    };
+
+    const roleIcons: Record<string, string> = {
+        'PO': '🎯', 'SM': '🛡️', 'Dev': '💻', 'Designer': '🎨', 'QA': '🔍', 'Other': '👤'
+    };
+
+    const getHealthColor = (value: number) => {
+        if (value >= 75) return 'bg-green-500';
+        if (value >= 50) return 'bg-yellow-500';
+        return 'bg-red-500';
+    };
+
+    const getHealthLabel = (value: number) => {
+        if (value >= 75) return 'Ottimo';
+        if (value >= 50) return 'Attenzione';
+        return 'Critico';
+    };
+
+    const healthPillars = healthMetrics ? [
+        { key: 'psychologicalSafety', icon: '🛡️', label: 'Sicurezza Psicologica', ...healthMetrics.psychologicalSafety },
+        { key: 'strategicAlignment', icon: '🎯', label: 'Allineamento Strategico', ...healthMetrics.strategicAlignment },
+        { key: 'crossFunctionality', icon: '👥', label: 'Cross-Funzionalità', ...healthMetrics.crossFunctionality },
+        { key: 'aiFluency', icon: '🤖', label: 'AI-Fluency', ...healthMetrics.aiFluency }
+    ] : [];
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-extrabold text-sidebar">6. AGILE TEAM</h2>
-                <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
-                    {loading ? 'Analyzing...' : '✨ Suggest Roles'}
-                </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {members.map(member => (
-                    <div key={member.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
-                        <div className="w-20 h-20 bg-gray-200 rounded-full mb-4 flex items-center justify-center text-2xl">
-                            {member.name[0]}
-                        </div>
-                        <input
-                            className="font-bold text-gray-800 text-center border-b border-transparent hover:border-gray-200 focus:border-accent bg-transparent"
-                            value={member.name}
-                            onChange={e => updateMember(member.id, 'name', e.target.value)}
-                        />
-                        <input
-                            className="text-sm text-accent font-bold uppercase mb-2 text-center border-b border-transparent hover:border-gray-200 focus:border-accent bg-transparent"
-                            value={member.role}
-                            onChange={e => updateMember(member.id, 'role', e.target.value)}
-                        />
-                        <div className="flex flex-wrap gap-2 justify-center">
-                            {member.skills?.map(s => <span key={s} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{s}</span>)}
-                        </div>
-                    </div>
-                ))}
-
-                {/* Add Member Card */}
-                <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col justify-center gap-2">
-                    <h3 className="font-bold text-gray-500 text-center mb-2">Add Team Member</h3>
-                    <input placeholder="Name" className="p-2 border rounded text-gray-900 bg-white" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} />
-                    <input placeholder="Role" className="p-2 border rounded text-gray-900 bg-white" value={newMemberRole} onChange={e => setNewMemberRole(e.target.value)} />
-                    <button onClick={addMember} className="bg-sidebar text-white py-2 rounded font-bold text-sm mt-2">Add</button>
+        <div className="space-y-6 h-[calc(100vh-140px)] overflow-y-auto pr-2">
+            {/* Header */}
+            <div className="flex justify-between items-center sticky top-0 bg-white z-10 py-2">
+                <div>
+                    <h2 className="text-3xl font-extrabold text-sidebar">6. AGILE TEAM</h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Gestione del team con monitoraggio salute in stile Obeya Room
+                    </p>
+                </div>
+                <div className="flex gap-3">
+                    <button
+                        onClick={addMember}
+                        className="bg-white border-2 border-accent text-accent px-4 py-2 rounded-xl font-bold text-sm hover:bg-accent hover:text-white transition-all"
+                    >
+                        + Aggiungi Membro
+                    </button>
+                    <button
+                        onClick={handleSuggestTeam}
+                        disabled={loading}
+                        className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-opacity-90 transition-all"
+                    >
+                        {loading ? (
+                            <span className="flex items-center gap-2">
+                                <span className="animate-spin">⏳</span> Analisi...
+                            </span>
+                        ) : '✨ Suggerisci Team AI'}
+                    </button>
                 </div>
             </div>
-            <button onClick={() => onSave({ members })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Team</button>
+
+            {/* Health Monitor Dashboard - Obeya Style */}
+            {members.length > 0 && healthMetrics && (
+                <div className="bg-gradient-to-r from-sidebar to-gray-800 rounded-2xl p-6 text-white">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-lg flex items-center gap-2">
+                            🏥 AI TEAM HEALTH MONITOR
+                        </h3>
+                        <span className="text-xs text-gray-400">
+                            Ultimo aggiornamento: {new Date(healthMetrics.lastUpdated).toLocaleString('it-IT')}
+                        </span>
+                    </div>
+
+                    {/* 4 Pillars */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {healthPillars.map(pillar => (
+                            <div key={pillar.key} className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-2xl">{pillar.icon}</span>
+                                    <span className="text-xs font-bold uppercase tracking-wide">{pillar.label}</span>
+                                </div>
+                                <div className="flex items-end gap-2">
+                                    <span className={`w-4 h-4 rounded-full ${getHealthColor(pillar.value)}`}></span>
+                                    <span className="text-3xl font-extrabold">{pillar.value}%</span>
+                                    <span className={`text-xs ${pillar.trend === 'up' ? 'text-green-400' : pillar.trend === 'down' ? 'text-red-400' : 'text-gray-400'}`}>
+                                        {pillar.trend === 'up' ? '↑' : pillar.trend === 'down' ? '↓' : '→'}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-1">{getHealthLabel(pillar.value)}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Active Alerts */}
+                    {healthPillars.some(p => p.alerts?.length > 0) && (
+                        <div className="mt-4 space-y-2">
+                            {healthPillars.flatMap(p => p.alerts || []).map((alert: any) => (
+                                <div key={alert.id} className={`flex items-center gap-3 p-3 rounded-lg ${alert.severity === 'critical' ? 'bg-red-500/20' :
+                                        alert.severity === 'warning' ? 'bg-yellow-500/20' : 'bg-blue-500/20'
+                                    }`}>
+                                    <span className="text-lg">
+                                        {alert.severity === 'critical' ? '🚨' : alert.severity === 'warning' ? '⚠️' : 'ℹ️'}
+                                    </span>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold">{alert.title}</p>
+                                        <p className="text-xs text-gray-300">{alert.description}</p>
+                                    </div>
+                                    <button className="text-xs bg-white/10 px-3 py-1 rounded-lg hover:bg-white/20 transition">
+                                        💡 {alert.suggestedAction.split(' ').slice(0, 3).join(' ')}...
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Team Stats Summary */}
+            {members.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <p className="text-xs font-bold text-gray-500 uppercase">Team Size</p>
+                        <p className="text-2xl font-extrabold text-sidebar">{members.length}</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <p className="text-xs font-bold text-gray-500 uppercase">Ore Totali/Settimana</p>
+                        <p className="text-2xl font-extrabold text-sidebar">
+                            {members.reduce((sum, m) => sum + (m.hoursPerWeek * (m.availability / 100)), 0).toFixed(0)}h
+                        </p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <p className="text-xs font-bold text-gray-500 uppercase">Skills Uniche</p>
+                        <p className="text-2xl font-extrabold text-sidebar">
+                            {new Set(members.flatMap(m => m.skills)).size}
+                        </p>
+                    </div>
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <p className="text-xs font-bold text-gray-500 uppercase">AI Comfort Medio</p>
+                        <p className="text-2xl font-extrabold text-sidebar">
+                            {(members.reduce((sum, m) => sum + m.aiComfortLevel, 0) / members.length).toFixed(1)} ⭐
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Empty State */}
+            {members.length === 0 && (
+                <div className="bg-gray-50 rounded-2xl p-12 text-center border-2 border-dashed border-gray-200">
+                    <div className="text-6xl mb-4">👥</div>
+                    <h3 className="text-xl font-bold text-gray-700 mb-2">Nessun Membro nel Team</h3>
+                    <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                        Clicca "✨ Suggerisci Team AI" per generare un team ideale basato sulla Vision e sul Backlog.
+                    </p>
+                    <button
+                        onClick={handleSuggestTeam}
+                        disabled={loading}
+                        className="bg-accent text-white px-8 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all"
+                    >
+                        ✨ Suggerisci Team AI
+                    </button>
+                </div>
+            )}
+
+            {/* Team Members Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {members.map(member => (
+                    <div
+                        key={member.id}
+                        className={`bg-white rounded-2xl shadow-sm border transition-all ${expandedMember === member.id ? 'border-accent shadow-lg' : 'border-gray-100 hover:border-gray-200'
+                            }`}
+                    >
+                        {/* Header */}
+                        <div
+                            className="p-4 flex items-center gap-4 cursor-pointer"
+                            onClick={() => setExpandedMember(expandedMember === member.id ? null : member.id)}
+                        >
+                            {/* Avatar */}
+                            <div
+                                className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0"
+                                style={{ backgroundColor: member.avatarColor }}
+                            >
+                                {member.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                            </div>
+
+                            {/* Basic Info */}
+                            <div className="flex-1 min-w-0">
+                                <input
+                                    className="font-bold text-gray-800 bg-transparent border-b border-transparent hover:border-gray-200 focus:border-accent w-full"
+                                    value={member.name}
+                                    onChange={e => updateMember(member.id, 'name', e.target.value)}
+                                    onClick={e => e.stopPropagation()}
+                                />
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-lg">{roleIcons[member.role] || '👤'}</span>
+                                    <select
+                                        className="text-sm text-accent font-bold uppercase bg-transparent cursor-pointer"
+                                        value={member.role}
+                                        onChange={e => updateMember(member.id, 'role', e.target.value)}
+                                        onClick={e => e.stopPropagation()}
+                                    >
+                                        <option value="PO">Product Owner</option>
+                                        <option value="SM">Scrum Master</option>
+                                        <option value="Dev">Developer</option>
+                                        <option value="Designer">Designer</option>
+                                        <option value="QA">QA Engineer</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Expand/Delete */}
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); deleteMember(member.id); }}
+                                    className="text-gray-400 hover:text-red-500 p-1 transition"
+                                >
+                                    🗑️
+                                </button>
+                                <span className="text-gray-400">
+                                    {expandedMember === member.id ? '▲' : '▼'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Expanded Details */}
+                        {expandedMember === member.id && (
+                            <div className="px-4 pb-4 pt-2 border-t border-gray-100 space-y-4">
+                                {/* Skills */}
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">🎯 Skills</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {member.skills.map((s, i) => (
+                                            <span key={i} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                                                {s}
+                                                <button
+                                                    onClick={() => updateMember(member.id, 'skills', member.skills.filter((_, idx) => idx !== i))}
+                                                    className="text-gray-400 hover:text-red-500"
+                                                >×</button>
+                                            </span>
+                                        ))}
+                                        <input
+                                            className="bg-gray-50 border border-gray-200 px-3 py-1 rounded-full text-sm w-24"
+                                            placeholder="+ Add"
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter' && e.currentTarget.value) {
+                                                    updateMember(member.id, 'skills', [...member.skills, e.currentTarget.value]);
+                                                    e.currentTarget.value = '';
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Hours & Availability */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">⏰ Ore/Settimana</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="60"
+                                            className="w-full border border-gray-200 rounded-lg p-2 text-center font-bold"
+                                            value={member.hoursPerWeek}
+                                            onChange={e => updateMember(member.id, 'hoursPerWeek', parseInt(e.target.value) || 0)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">📊 Disponibilità</label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                className="flex-1"
+                                                value={member.availability}
+                                                onChange={e => updateMember(member.id, 'availability', parseInt(e.target.value))}
+                                            />
+                                            <span className="font-bold text-sm w-12 text-right">{member.availability}%</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* AI Comfort Level */}
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">🤖 AI Comfort Level</label>
+                                    <div className="flex gap-2">
+                                        {[1, 2, 3, 4, 5].map(level => (
+                                            <button
+                                                key={level}
+                                                onClick={() => updateMember(member.id, 'aiComfortLevel', level)}
+                                                className={`w-10 h-10 rounded-lg font-bold transition ${member.aiComfortLevel >= level
+                                                        ? 'bg-accent text-white'
+                                                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                {level}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        {member.aiComfortLevel <= 2 ? 'Principiante AI' : member.aiComfortLevel <= 3 ? 'Intermedio' : 'Esperto AI'}
+                                    </p>
+                                </div>
+
+                                {/* Effective Hours */}
+                                <div className="bg-gray-50 p-3 rounded-lg text-center">
+                                    <p className="text-xs text-gray-500">Ore Effettive</p>
+                                    <p className="text-2xl font-extrabold text-sidebar">
+                                        {(member.hoursPerWeek * member.availability / 100).toFixed(1)}h/settimana
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            {/* Save Button */}
+            {members.length > 0 && (
+                <button
+                    onClick={() => onSave({ members })}
+                    className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90 transition-all sticky bottom-0"
+                >
+                    💾 Salva Team & Continua
+                </button>
+            )}
         </div>
     );
 };
