@@ -58,7 +58,10 @@ export const VoiceAssistant: React.FC = () => {
       setStatus('connecting');
       setIsActive(true);
 
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = process.env.API_KEY;
+      if (!apiKey) throw new Error("API Key missing.");
+
+      const ai = new GoogleGenAI({ apiKey });
       
       // Initialize Audio Contexts
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;

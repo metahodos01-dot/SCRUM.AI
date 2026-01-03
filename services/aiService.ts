@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
 const MODEL_TEXT = 'gemini-3-flash-preview';
 
 export const aiService = {
@@ -156,6 +157,7 @@ export const aiService = {
     const response = await ai.models.generateContent({
       model: MODEL_TEXT,
       contents: prompt,
+      config: { responseMimeType: 'application/json' }
     });
     return response.text;
   },
