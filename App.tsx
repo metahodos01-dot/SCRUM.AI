@@ -173,167 +173,68 @@ const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: an
   return (
     <div className="space-y-6 animate-fade-in h-[calc(100vh-140px)] flex flex-col">
       <h2 className="text-3xl font-extrabold text-sidebar">1. AGILE MINDSET & SCRUM FRAMEWORK</h2>
-      
-      {/* Tabs */}
       <div className="flex gap-4 border-b border-gray-200 pb-1">
          <button onClick={() => setTab('mindset')} className={`pb-2 px-4 font-bold ${tab === 'mindset' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}>The Mindset Shift</button>
          <button onClick={() => setTab('scrum')} className={`pb-2 px-4 font-bold ${tab === 'scrum' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}>Scrum Framework</button>
          <button onClick={() => setTab('coach')} className={`pb-2 px-4 font-bold ${tab === 'coach' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}>🤖 AI Agile Coach</button>
       </div>
-
       <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
           {tab === 'mindset' && (
             <div className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="bg-gray-200 p-8 rounded-2xl opacity-70 grayscale transition hover:grayscale-0 hover:opacity-100">
                       <h3 className="text-xl font-bold text-gray-600 mb-4">🏭 Traditional (Waterfall)</h3>
-                      <p className="text-sm text-gray-500 mb-4">Fixed scope, fixed timeline, command & control. Changes are expensive and resisted.</p>
+                      <p className="text-sm text-gray-500 mb-4">Fixed scope, fixed timeline, command & control.</p>
                       <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
                           <li>Detailed upfront planning</li>
-                          <li>Strict phase gates (Requirements &rarr; Design &rarr; Code &rarr; Test)</li>
+                          <li>Strict phase gates</li>
                           <li>Value delivered only at the end</li>
-                          <li>Process-centric</li>
                       </ul>
                   </div>
                   <div className="bg-white p-8 rounded-2xl shadow-lg border-2 border-accent/20 transform hover:scale-105 transition duration-300">
                       <h3 className="text-xl font-bold text-accent mb-4">🚀 Agile Mindset</h3>
-                      <p className="text-sm text-gray-600 mb-4">Iterative, incremental, empirical. We embrace change to delight the customer.</p>
+                      <p className="text-sm text-gray-600 mb-4">Iterative, incremental, empirical. Embrace change.</p>
                       <ul className="list-disc pl-5 space-y-2 text-gray-700 text-sm">
                           <li><strong className="text-sidebar">Empiricism:</strong> Transparency, Inspection, Adaptation.</li>
                           <li>Working software over docs.</li>
-                          <li>Responding to change over following a plan.</li>
-                          <li>Value delivered continuously.</li>
+                          <li>Responding to change.</li>
                       </ul>
                   </div>
               </div>
-              
-              <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 text-center">
-                  <h4 className="font-bold text-blue-900 mb-2">The 3 Pillars of Empiricism</h4>
-                  <div className="flex justify-center gap-10 mt-4">
-                      <div className="bg-white p-4 rounded-xl shadow-sm w-40">
-                          <div className="text-3xl mb-2">🔍</div>
-                          <div className="font-bold text-sm">Transparency</div>
-                      </div>
-                      <div className="bg-white p-4 rounded-xl shadow-sm w-40">
-                          <div className="text-3xl mb-2">🧐</div>
-                          <div className="font-bold text-sm">Inspection</div>
-                      </div>
-                      <div className="bg-white p-4 rounded-xl shadow-sm w-40">
-                          <div className="text-3xl mb-2">🔄</div>
-                          <div className="font-bold text-sm">Adaptation</div>
-                      </div>
-                  </div>
-              </div>
-
               <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm justify-end">
                 <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="w-5 h-5 text-accent rounded focus:ring-accent" />
                     <span className="font-medium text-gray-700">I acknowledge and accept the Agile principles</span>
                 </label>
-                <button 
-                    onClick={() => onSave({ completed: accepted, comment: 'Accepted Agile Mindset' })}
-                    disabled={!accepted}
-                    className="bg-accent text-white px-6 py-2 rounded-xl font-bold disabled:opacity-50"
-                >
-                    Mark as Complete
-                </button>
+                <button onClick={() => onSave({ completed: accepted, comment: 'Accepted Agile Mindset' })} disabled={!accepted} className="bg-accent text-white px-6 py-2 rounded-xl font-bold disabled:opacity-50">Mark as Complete</button>
               </div>
             </div>
           )}
-
           {tab === 'scrum' && (
               <div className="space-y-6">
                   <div className="relative bg-white rounded-2xl shadow-sm p-8 overflow-hidden">
                       <div className="absolute top-0 left-0 w-2 h-full bg-accent"></div>
                       <h3 className="text-2xl font-extrabold text-sidebar mb-6">The Scrum Framework</h3>
-                      
-                      {/* Interactive Roles */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                          <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 hover:shadow-md transition cursor-help group">
-                              <div className="text-2xl mb-2">👑</div>
-                              <h4 className="font-bold text-indigo-900">Product Owner</h4>
-                              <p className="text-xs text-indigo-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Maximizes value, manages Product Backlog.</p>
-                          </div>
-                          <div className="bg-pink-50 p-4 rounded-xl border border-pink-100 hover:shadow-md transition cursor-help group">
-                              <div className="text-2xl mb-2">🛡️</div>
-                              <h4 className="font-bold text-pink-900">Scrum Master</h4>
-                              <p className="text-xs text-pink-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Coaches team, removes impediments, upholds Scrum.</p>
-                          </div>
-                          <div className="bg-green-50 p-4 rounded-xl border border-green-100 hover:shadow-md transition cursor-help group">
-                              <div className="text-2xl mb-2">🛠️</div>
-                              <h4 className="font-bold text-green-900">Developers</h4>
-                              <p className="text-xs text-green-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Creates "Done" Increment, self-managing.</p>
-                          </div>
-                      </div>
-
-                      {/* The Sprint Cycle */}
-                      <div className="border-t pt-6">
-                          <h4 className="font-bold text-gray-500 uppercase text-xs mb-4">The Sprint (Heart of Scrum)</h4>
-                          <div className="flex items-center gap-2 overflow-x-auto pb-4">
-                              <div className="min-w-[120px] bg-white border-2 border-gray-200 p-3 rounded-lg text-center">
-                                  <div className="text-xs font-bold text-gray-400">Step 1</div>
-                                  <div className="font-bold text-sm">Sprint Planning</div>
-                              </div>
-                              <div className="text-gray-400">&rarr;</div>
-                              <div className="min-w-[120px] bg-accent/10 border-2 border-accent p-3 rounded-lg text-center">
-                                  <div className="text-xs font-bold text-accent">1-4 Weeks</div>
-                                  <div className="font-bold text-sm">Daily Scrum</div>
-                              </div>
-                              <div className="text-gray-400">&rarr;</div>
-                              <div className="min-w-[120px] bg-white border-2 border-gray-200 p-3 rounded-lg text-center">
-                                  <div className="text-xs font-bold text-gray-400">Inspect Product</div>
-                                  <div className="font-bold text-sm">Sprint Review</div>
-                              </div>
-                              <div className="text-gray-400">&rarr;</div>
-                              <div className="min-w-[120px] bg-white border-2 border-gray-200 p-3 rounded-lg text-center">
-                                  <div className="text-xs font-bold text-gray-400">Inspect Process</div>
-                                  <div className="font-bold text-sm">Retrospective</div>
-                              </div>
-                          </div>
-                      </div>
-                      
-                      {/* Values */}
-                      <div className="mt-6 flex flex-wrap gap-2">
-                          {['Commitment', 'Focus', 'Openness', 'Respect', 'Courage'].map(v => (
-                              <span key={v} className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold border border-gray-200">
-                                  {v}
-                              </span>
-                          ))}
+                          <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100"><div className="text-2xl mb-2">👑</div><h4 className="font-bold text-indigo-900">Product Owner</h4></div>
+                          <div className="bg-pink-50 p-4 rounded-xl border border-pink-100"><div className="text-2xl mb-2">🛡️</div><h4 className="font-bold text-pink-900">Scrum Master</h4></div>
+                          <div className="bg-green-50 p-4 rounded-xl border border-green-100"><div className="text-2xl mb-2">🛠️</div><h4 className="font-bold text-green-900">Developers</h4></div>
                       </div>
                   </div>
               </div>
           )}
-
           {tab === 'coach' && (
               <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                  <div className="bg-gray-50 p-4 border-b">
-                      <h3 className="font-bold text-gray-700">Ask the Agile Coach</h3>
-                      <p className="text-xs text-gray-500">Ask about roles, ceremonies, or how to handle a situation.</p>
-                  </div>
                   <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
-                      {chatHistory.length === 0 && (
-                          <div className="text-center text-gray-400 mt-10">
-                              <div className="text-4xl mb-2">🤖</div>
-                              <p>Hi! I'm your AI Agile Coach. Ask me anything about Scrum!</p>
-                          </div>
-                      )}
                       {chatHistory.map((msg, i) => (
                           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                              <div className={`max-w-[80%] p-3 rounded-xl text-sm ${msg.role === 'user' ? 'bg-sidebar text-white rounded-tr-none' : 'bg-white border shadow-sm text-gray-800 rounded-tl-none'}`}>
-                                  {msg.text}
-                              </div>
+                              <div className={`max-w-[80%] p-3 rounded-xl text-sm ${msg.role === 'user' ? 'bg-sidebar text-white' : 'bg-white border shadow-sm text-gray-800'}`}>{msg.text}</div>
                           </div>
                       ))}
                       {isTyping && <div className="text-xs text-gray-400 ml-2">Coach is typing...</div>}
                   </div>
                   <div className="p-4 bg-white border-t flex gap-2">
-                      <input 
-                        className="flex-1 border border-gray-300 rounded-xl px-4 py-2 focus:ring-accent focus:border-accent"
-                        placeholder="Type your question..."
-                        value={question}
-                        onChange={e => setQuestion(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleAskCoach()}
-                      />
+                      <input className="flex-1 border border-gray-300 rounded-xl px-4 py-2" placeholder="Type..." value={question} onChange={e => setQuestion(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAskCoach()} />
                       <button onClick={handleAskCoach} className="bg-accent text-white px-4 py-2 rounded-xl font-bold">Send</button>
                   </div>
               </div>
@@ -347,7 +248,6 @@ const PhaseVision = ({ project, onSave }: { project: Project, onSave: (data: any
   const [inputs, setInputs] = useState(project.phases.vision?.inputs || { name: project.name, target: '', problem: '', currentSolution: '', differentiation: '' });
   const [generatedVision, setGeneratedVision] = useState(project.phases.vision?.text || '');
   const [loading, setLoading] = useState(false);
-
   const handleGenerate = async () => {
     setLoading(true);
     try {
@@ -356,29 +256,17 @@ const PhaseVision = ({ project, onSave }: { project: Project, onSave: (data: any
     } catch (e) { alert("AI Error"); }
     setLoading(false);
   };
-
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-extrabold text-sidebar">2. PRODUCT VISION</h2>
       <div className="grid grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-          <h3 className="font-bold text-gray-700">Inputs</h3>
           <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Target Audience" value={inputs.target} onChange={e => setInputs({...inputs, target: e.target.value})} />
           <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Problem to Solve" value={inputs.problem} onChange={e => setInputs({...inputs, problem: e.target.value})} />
-          <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Current Solution" value={inputs.currentSolution} onChange={e => setInputs({...inputs, currentSolution: e.target.value})} />
-          <textarea className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Differentiation" value={inputs.differentiation} onChange={e => setInputs({...inputs, differentiation: e.target.value})} />
-          <button onClick={handleGenerate} disabled={loading} className="w-full bg-sidebar text-white py-3 rounded-xl font-bold">
-            {loading ? 'Generating...' : '✨ Generate Vision with AI'}
-          </button>
+          <button onClick={handleGenerate} disabled={loading} className="w-full bg-sidebar text-white py-3 rounded-xl font-bold">{loading ? 'Generating...' : '✨ Generate Vision'}</button>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-          <h3 className="font-bold text-gray-700 mb-2">Vision Statement (Editable)</h3>
-          {/* Changed to Textarea for easy editing */}
-          <textarea 
-            className="flex-1 border rounded-xl p-4 bg-gray-50 text-gray-800 min-h-[300px] font-sans" 
-            value={generatedVision} 
-            onChange={e => setGeneratedVision(e.target.value)} 
-          />
+          <textarea className="flex-1 border rounded-xl p-4 bg-gray-50 text-gray-800 min-h-[300px] font-sans" value={generatedVision} onChange={e => setGeneratedVision(e.target.value)} />
           <button onClick={() => onSave({ inputs, text: generatedVision })} className="mt-4 bg-accent text-white py-3 rounded-xl font-bold">Save & Continue</button>
         </div>
       </div>
@@ -390,51 +278,22 @@ const PhaseObjectives = ({ project, onSave }: { project: Project, onSave: (data:
   const [deadline, setDeadline] = useState(project.phases.objectives?.deadline || '');
   const [generatedObjectives, setGeneratedObjectives] = useState(project.phases.objectives?.text || '');
   const [loading, setLoading] = useState(false);
-
   const handleGenerate = async () => {
-    if (!project.phases.vision?.text) {
-        alert("Please complete Product Vision first.");
-        return;
-    }
+    if (!project.phases.vision?.text) { alert("Complete Vision first."); return; }
     setLoading(true);
-    try {
-      const text = await aiService.generateObjectives(project.phases.vision.text, deadline);
-      setGeneratedObjectives(text);
-    } catch (e) { alert("AI Error"); }
+    try { const text = await aiService.generateObjectives(project.phases.vision.text, deadline); setGeneratedObjectives(text); } catch (e) { alert("AI Error"); }
     setLoading(false);
   };
-
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-extrabold text-sidebar">3. STRATEGIC OBJECTIVES</h2>
       <div className="grid grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-          <h3 className="font-bold text-gray-700">Settings</h3>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Target Date / Deadline</label>
-            <input 
-                type="date" 
-                className="w-full border p-3 rounded-xl text-gray-800 bg-white" 
-                value={deadline} 
-                onChange={e => setDeadline(e.target.value)} 
-            />
-          </div>
-          <div className="bg-gray-50 p-4 rounded-xl">
-             <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Based on Vision</h4>
-             <div className="text-sm text-gray-600 line-clamp-4" dangerouslySetInnerHTML={{__html: project.phases.vision?.text || 'No vision found.'}} />
-          </div>
-          <button onClick={handleGenerate} disabled={loading || !deadline} className="w-full bg-sidebar text-white py-3 rounded-xl font-bold disabled:opacity-50">
-            {loading ? 'Generating...' : '✨ Generate Objectives'}
-          </button>
+            <input type="date" className="w-full border p-3 rounded-xl text-gray-800 bg-white" value={deadline} onChange={e => setDeadline(e.target.value)} />
+            <button onClick={handleGenerate} disabled={loading || !deadline} className="w-full bg-sidebar text-white py-3 rounded-xl font-bold disabled:opacity-50">{loading ? 'Generating...' : '✨ Generate Objectives'}</button>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-          <h3 className="font-bold text-gray-700 mb-2">SMART Objectives (Editable)</h3>
-          {/* Changed to Textarea for easy editing */}
-          <textarea 
-            className="flex-1 border rounded-xl p-4 bg-gray-50 text-gray-800 min-h-[300px] font-sans" 
-            value={generatedObjectives} 
-            onChange={e => setGeneratedObjectives(e.target.value)} 
-          />
+          <textarea className="flex-1 border rounded-xl p-4 bg-gray-50 text-gray-800 min-h-[300px] font-sans" value={generatedObjectives} onChange={e => setGeneratedObjectives(e.target.value)} />
           <button onClick={() => onSave({ text: generatedObjectives, deadline })} className="mt-4 bg-accent text-white py-3 rounded-xl font-bold">Save & Continue</button>
         </div>
       </div>
@@ -445,175 +304,38 @@ const PhaseObjectives = ({ project, onSave }: { project: Project, onSave: (data:
 const PhaseKPIs = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     const [kpis, setKpis] = useState<any[]>(project.phases.kpis?.table || []);
     const [loading, setLoading] = useState(false);
-
     const handleGenerate = async () => {
-        if (!project.phases.objectives?.text) {
-            alert("Please complete Objectives first.");
-            return;
-        }
+        if (!project.phases.objectives?.text) { alert("Complete Objectives first."); return; }
         setLoading(true);
-        try {
-            const result = await aiService.generateKPIs(project.phases.objectives.text);
-            setKpis(result);
-        } catch (e) { console.error(e); alert("AI Error"); }
+        try { const result = await aiService.generateKPIs(project.phases.objectives.text); setKpis(result); } catch (e) { alert("AI Error"); }
         setLoading(false);
     };
-
-    const updateKpi = (index: number, field: string, value: string) => {
-        const newKpis = [...kpis];
-        newKpis[index][field] = value;
-        setKpis(newKpis);
-    };
-
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-extrabold text-sidebar">4. KEY PERFORMANCE INDICATORS</h2>
-                <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
-                    {loading ? 'Generating...' : '✨ Generate KPIs'}
-                </button>
-            </div>
-            
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">KPI Name</th>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Target</th>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Metric</th>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Frequency</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                        {kpis.length === 0 && (
-                            <tr>
-                                <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
-                                    No KPIs generated yet. Click the button above to generate based on your objectives.
-                                </td>
-                            </tr>
-                        )}
-                        {kpis.map((kpi, i) => (
-                            <tr key={i}>
-                                <td className="px-6 py-4">
-                                    <input className="w-full border-0 bg-transparent text-sm font-medium text-gray-900 focus:ring-0" value={kpi.kpi} onChange={e => updateKpi(i, 'kpi', e.target.value)} />
-                                </td>
-                                <td className="px-6 py-4">
-                                    <input className="w-full border-0 bg-transparent text-sm text-gray-600 focus:ring-0" value={kpi.target} onChange={e => updateKpi(i, 'target', e.target.value)} />
-                                </td>
-                                <td className="px-6 py-4">
-                                    <input className="w-full border-0 bg-transparent text-sm text-gray-600 focus:ring-0" value={kpi.metric} onChange={e => updateKpi(i, 'metric', e.target.value)} />
-                                </td>
-                                <td className="px-6 py-4">
-                                    <input className="w-full border-0 bg-transparent text-sm text-gray-600 focus:ring-0" value={kpi.frequency} onChange={e => updateKpi(i, 'frequency', e.target.value)} />
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-             {kpis.length > 0 && (
-                <button onClick={() => onSave({ table: kpis })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90">
-                    Save KPIs & Continue
-                </button>
-            )}
+            <div className="flex justify-between items-center"><h2 className="text-3xl font-extrabold text-sidebar">4. KEY PERFORMANCE INDICATORS</h2><button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">{loading ? 'Generating...' : '✨ Generate KPIs'}</button></div>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"><table className="w-full"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">KPI Name</th><th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Target</th><th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Metric</th></tr></thead><tbody className="divide-y divide-gray-100">{kpis.map((kpi, i) => (<tr key={i}><td className="px-6 py-4 text-gray-800">{kpi.kpi}</td><td className="px-6 py-4 text-gray-600">{kpi.target}</td><td className="px-6 py-4 text-gray-600">{kpi.metric}</td></tr>))}</tbody></table></div>
+            {kpis.length > 0 && <button onClick={() => onSave({ table: kpis })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save KPIs</button>}
         </div>
     );
-}
+};
 
 const PhaseBacklog = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
   const [epics, setEpics] = useState<Epic[]>(project.phases.backlog?.epics || []);
   const [loading, setLoading] = useState(false);
-
   const handleGenerate = async () => {
     setLoading(true);
     try {
       const result = await aiService.generateBacklog(project.phases.vision?.text || '', project.phases.objectives?.text || '');
-      // Transform simple JSON to typed Epics
-      const newEpics = result.map((e: any, i: number) => ({
-        id: `epic-${Date.now()}-${i}`,
-        title: e.title,
-        stories: e.stories.map((s: any, j: number) => ({
-          id: `story-${Date.now()}-${i}-${j}`,
-          title: s.title,
-          description: s.description,
-          acceptanceCriteria: s.acceptanceCriteria,
-          storyPoints: 0,
-          estimatedHours: 0,
-          status: 'todo',
-          isInSprint: false,
-          assigneeIds: []
-        }))
-      }));
+      const newEpics = result.map((e: any, i: number) => ({ id: `epic-${Date.now()}-${i}`, title: e.title, stories: e.stories.map((s: any, j: number) => ({ id: `story-${Date.now()}-${i}-${j}`, title: s.title, description: s.description, acceptanceCriteria: s.acceptanceCriteria, storyPoints: 0, estimatedHours: 0, status: 'todo', isInSprint: false, assigneeIds: [] })) }));
       setEpics(newEpics);
-    } catch (e) { console.error(e); alert("AI Error"); }
+    } catch (e) { alert("AI Error"); }
     setLoading(false);
   };
-
-  const updateEpicTitle = (index: number, val: string) => {
-      const newEpics = [...epics];
-      newEpics[index].title = val;
-      setEpics(newEpics);
-  }
-
-  const updateStory = (epicIndex: number, storyIndex: number, field: string, val: any) => {
-      const newEpics = [...epics];
-      (newEpics[epicIndex].stories[storyIndex] as any)[field] = val;
-      setEpics(newEpics);
-  }
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-extrabold text-sidebar">5. PRODUCT BACKLOG</h2>
-        <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
-          {loading ? 'Generating...' : '✨ Generate Backlog'}
-        </button>
-      </div>
-
-      <div className="space-y-4">
-        {epics.map((epic, i) => (
-          <div key={epic.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-             <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                <input 
-                    className="font-bold text-lg text-sidebar bg-transparent border-0 focus:ring-0 w-full"
-                    value={epic.title}
-                    onChange={e => updateEpicTitle(i, e.target.value)}
-                />
-                <span className="text-xs font-bold text-gray-400 bg-white px-2 py-1 rounded border">{epic.stories.length} Stories</span>
-             </div>
-             <div className="divide-y divide-gray-100">
-               {epic.stories.map((story, j) => (
-                 <div key={story.id} className="p-6 hover:bg-gray-50 transition">
-                    <div className="flex justify-between items-start mb-2">
-                       <input 
-                            className="font-bold text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-accent w-full mr-4"
-                            value={story.title}
-                            onChange={e => updateStory(i, j, 'title', e.target.value)}
-                       />
-                       <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded shrink-0">SP: {story.storyPoints}</span>
-                    </div>
-                    <textarea 
-                        className="w-full text-sm text-gray-600 mb-3 bg-transparent border border-transparent hover:border-gray-200 rounded p-1"
-                        value={story.description}
-                        onChange={e => updateStory(i, j, 'description', e.target.value)}
-                    />
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <p className="text-xs font-bold text-blue-800 mb-1">Acceptance Criteria:</p>
-                      <ul className="list-disc pl-4 text-xs text-blue-700">
-                        {story.acceptanceCriteria.map((ac, k) => <li key={k}>{ac}</li>)}
-                      </ul>
-                    </div>
-                 </div>
-               ))}
-             </div>
-          </div>
-        ))}
-      </div>
-      {epics.length > 0 && (
-         <button onClick={() => onSave({ epics })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90">
-           Save Backlog & Continue
-         </button>
-      )}
+      <div className="flex justify-between items-center"><h2 className="text-3xl font-extrabold text-sidebar">5. PRODUCT BACKLOG</h2><button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">{loading ? 'Generating...' : '✨ Generate Backlog'}</button></div>
+      <div className="space-y-4">{epics.map((epic, i) => (<div key={epic.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"><div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center"><span className="font-bold text-lg text-sidebar">{epic.title}</span><span className="text-xs font-bold text-gray-400 bg-white px-2 py-1 rounded border">{epic.stories.length} Stories</span></div><div className="divide-y divide-gray-100">{epic.stories.map((story) => (<div key={story.id} className="p-6 hover:bg-gray-50 transition"><div className="flex justify-between items-start mb-2"><span className="font-bold text-gray-800">{story.title}</span><span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded shrink-0">SP: {story.storyPoints}</span></div><p className="text-sm text-gray-600 mb-3">{story.description}</p></div>))}</div></div>))}</div>
+      {epics.length > 0 && <button onClick={() => onSave({ epics })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90">Save Backlog</button>}
     </div>
   );
 };
@@ -621,81 +343,19 @@ const PhaseBacklog = ({ project, onSave }: { project: Project, onSave: (data: an
 const PhaseTeam = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     const [members, setMembers] = useState<TeamMember[]>(project.phases.team?.members || []);
     const [loading, setLoading] = useState(false);
-    const [newMemberName, setNewMemberName] = useState('');
-    const [newMemberRole, setNewMemberRole] = useState('');
-
     const handleGenerate = async () => {
         setLoading(true);
         try {
             const result = await aiService.generateTeamRecommendations(project.phases.vision?.text || '');
-            const newMembers = result.map((r: any, i: number) => ({
-                id: `member-${Date.now()}-${i}`,
-                name: `Candidate ${i+1}`,
-                role: r.role,
-                skills: r.skills,
-                email: 'pending@hire.com'
-            }));
+            const newMembers = result.map((r: any, i: number) => ({ id: `member-${Date.now()}-${i}`, name: `Candidate ${i+1}`, role: r.role, skills: r.skills }));
             setMembers([...members, ...newMembers]);
         } catch (e) { alert("AI Error"); }
         setLoading(false);
     };
-
-    const addMember = () => {
-        if (!newMemberName || !newMemberRole) return;
-        setMembers([...members, {
-            id: `member-${Date.now()}`,
-            name: newMemberName,
-            role: newMemberRole,
-            skills: [],
-            email: ''
-        }]);
-        setNewMemberName('');
-        setNewMemberRole('');
-    };
-
-    const updateMember = (id: string, field: string, val: string) => {
-        setMembers(members.map(m => m.id === id ? { ...m, [field]: val } : m));
-    }
-
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-extrabold text-sidebar">6. AGILE TEAM</h2>
-                <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
-                    {loading ? 'Analyzing...' : '✨ Suggest Roles'}
-                </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                 {members.map(member => (
-                     <div key={member.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
-                         <div className="w-20 h-20 bg-gray-200 rounded-full mb-4 flex items-center justify-center text-2xl">
-                             {member.name[0]}
-                         </div>
-                         <input 
-                            className="font-bold text-gray-800 text-center border-b border-transparent hover:border-gray-200 focus:border-accent bg-transparent"
-                            value={member.name}
-                            onChange={e => updateMember(member.id, 'name', e.target.value)}
-                         />
-                         <input 
-                            className="text-sm text-accent font-bold uppercase mb-2 text-center border-b border-transparent hover:border-gray-200 focus:border-accent bg-transparent"
-                            value={member.role}
-                            onChange={e => updateMember(member.id, 'role', e.target.value)}
-                         />
-                         <div className="flex flex-wrap gap-2 justify-center">
-                             {member.skills?.map(s => <span key={s} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{s}</span>)}
-                         </div>
-                     </div>
-                 ))}
-                 
-                 {/* Add Member Card */}
-                 <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col justify-center gap-2">
-                     <h3 className="font-bold text-gray-500 text-center mb-2">Add Team Member</h3>
-                     <input placeholder="Name" className="p-2 border rounded text-gray-900 bg-white" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} />
-                     <input placeholder="Role" className="p-2 border rounded text-gray-900 bg-white" value={newMemberRole} onChange={e => setNewMemberRole(e.target.value)} />
-                     <button onClick={addMember} className="bg-sidebar text-white py-2 rounded font-bold text-sm mt-2">Add</button>
-                 </div>
-            </div>
+            <div className="flex justify-between items-center"><h2 className="text-3xl font-extrabold text-sidebar">6. AGILE TEAM</h2><button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">{loading ? 'Analyzing...' : '✨ Suggest Roles'}</button></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{members.map(member => (<div key={member.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center"><div className="w-20 h-20 bg-gray-200 rounded-full mb-4 flex items-center justify-center text-2xl bg-sidebar text-white">{member.name[0]}</div><h3 className="font-bold text-gray-800">{member.name}</h3><p className="text-sm text-accent font-bold uppercase mb-2">{member.role}</p></div>))}</div>
             <button onClick={() => onSave({ members })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Team</button>
         </div>
     );
@@ -703,121 +363,32 @@ const PhaseTeam = ({ project, onSave }: { project: Project, onSave: (data: any) 
 
 const PhaseEstimates = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
   const [loading, setLoading] = useState(false);
-  // We need local state to allow editing before saving
   const [localEpics, setLocalEpics] = useState<Epic[]>(project.phases.backlog?.epics || []);
   const allStories = localEpics.flatMap(e => e.stories);
-  
   const handleEstimate = async () => {
     setLoading(true);
     try {
         const storiesToEstimate = allStories.filter(s => s.storyPoints === 0);
-        if(storiesToEstimate.length === 0) {
-            alert("All stories already have points. Reset them to re-estimate.");
-            setLoading(false);
-            return;
-        }
-
+        if(storiesToEstimate.length === 0) { alert("No stories to estimate."); setLoading(false); return; }
         const estimates = await aiService.generateEstimates(storiesToEstimate);
-        
         let estIndex = 0;
-        const newEpics = localEpics.map(epic => ({
-            ...epic,
-            stories: epic.stories.map(story => {
-                if (story.storyPoints === 0 && estimates[estIndex]) {
-                    const est = estimates[estIndex];
-                    estIndex++;
-                    return { ...story, storyPoints: est.storyPoints, estimatedHours: est.estimatedHours };
-                }
-                return story;
-            })
-        }));
+        const newEpics = localEpics.map(epic => ({ ...epic, stories: epic.stories.map(story => { if (story.storyPoints === 0 && estimates[estIndex]) { const est = estimates[estIndex]; estIndex++; return { ...story, storyPoints: est.storyPoints, estimatedHours: est.estimatedHours }; } return story; }) }));
         setLocalEpics(newEpics);
-
     } catch(e) { console.error(e); alert("AI Error"); }
     setLoading(false);
   };
-
-  const updateStory = (storyId: string, field: 'storyPoints' | 'estimatedHours', value: string) => {
-      const numValue = parseInt(value) || 0;
-      setLocalEpics(prev => prev.map(epic => ({
-          ...epic,
-          stories: epic.stories.map(s => s.id === storyId ? { ...s, [field]: numValue } : s)
-      })));
-  };
-
   const saveEstimates = async () => {
-      // We need to update the Backlog phase with the new estimates
       const projectRef = doc(db, 'projects', project.id);
-      await updateDoc(projectRef, { 
-          "phases.backlog.epics": localEpics,
-          "phases.estimates.processed": true 
-      });
+      await updateDoc(projectRef, { "phases.backlog.epics": localEpics, "phases.estimates.processed": true });
       onSave({ processed: true });
-      alert("Estimates saved successfully!");
+      alert("Estimates saved!");
   };
-
   const totalPoints = allStories.reduce((acc, s) => acc + (s.storyPoints || 0), 0);
   const totalHours = allStories.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
-
   return (
       <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-3xl font-extrabold text-sidebar">7. ESTIMATIONS</h2>
-            <div className="flex gap-4">
-                <div className="text-right">
-                    <p className="text-xs text-gray-500 font-bold uppercase">Total Points</p>
-                    <p className="text-2xl font-bold text-accent">{totalPoints}</p>
-                </div>
-                <div className="text-right">
-                    <p className="text-xs text-gray-500 font-bold uppercase">Total Hours</p>
-                    <p className="text-2xl font-bold text-sidebar">{totalHours}h</p>
-                </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-             <table className="w-full">
-                 <thead className="bg-gray-50 border-b border-gray-200">
-                     <tr>
-                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Story</th>
-                         <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase w-32">Story Points</th>
-                         <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase w-32">Hours</th>
-                     </tr>
-                 </thead>
-                 <tbody className="divide-y divide-gray-100">
-                     {allStories.map((story) => (
-                         <tr key={story.id}>
-                             <td className="px-6 py-4 text-sm text-gray-800">{story.title}</td>
-                             <td className="px-6 py-4 text-center">
-                                 <input 
-                                    type="number" 
-                                    className="w-16 p-1 border rounded text-center text-blue-800 font-bold bg-blue-50"
-                                    value={story.storyPoints || ''}
-                                    onChange={(e) => updateStory(story.id, 'storyPoints', e.target.value)}
-                                 />
-                             </td>
-                             <td className="px-6 py-4 text-center">
-                                 <input 
-                                    type="number" 
-                                    className="w-16 p-1 border rounded text-center text-gray-600 font-mono bg-white"
-                                    value={story.estimatedHours || ''}
-                                    onChange={(e) => updateStory(story.id, 'estimatedHours', e.target.value)}
-                                 />
-                             </td>
-                         </tr>
-                     ))}
-                 </tbody>
-             </table>
-          </div>
-          
-          <div className="flex gap-4">
-              <button onClick={handleEstimate} disabled={loading} className="flex-1 bg-sidebar text-white py-4 rounded-xl font-bold">
-                  {loading ? 'AI is analyzing complexity...' : '✨ Generate Estimations with AI'}
-              </button>
-              <button onClick={saveEstimates} className="flex-1 bg-accent text-white py-4 rounded-xl font-bold shadow-lg">
-                  Save All Estimates
-              </button>
-          </div>
+          <div className="flex justify-between items-center"><h2 className="text-3xl font-extrabold text-sidebar">7. ESTIMATIONS</h2><div className="text-right"><p className="text-2xl font-bold text-accent">{totalPoints} SP</p><p className="text-xs text-gray-500 font-bold uppercase">Total Hours: {totalHours}h</p></div></div>
+          <div className="flex gap-4"><button onClick={handleEstimate} disabled={loading} className="flex-1 bg-sidebar text-white py-4 rounded-xl font-bold">{loading ? 'AI Estimating...' : '✨ Generate Estimations'}</button><button onClick={saveEstimates} className="flex-1 bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Estimates</button></div>
       </div>
   )
 }
@@ -825,79 +396,21 @@ const PhaseEstimates = ({ project, onSave }: { project: Project, onSave: (data: 
 const PhaseRoadmap = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     const [roadmap, setRoadmap] = useState<any[]>(project.phases.roadmap?.items || []);
     const [loading, setLoading] = useState(false);
-
     const handleGenerate = async () => {
         setLoading(true);
         try {
             const epics = project.phases.backlog?.epics || [];
-            if(epics.length === 0) {
-              alert("Backlog is empty. Please generate backlog first.");
-              return;
-            }
+            if(epics.length === 0) { alert("Backlog empty."); return; }
             const result = await aiService.generateRoadmap(project.phases.vision?.text || '', epics);
             setRoadmap(result);
         } catch(e) { console.error(e); alert("AI Error"); }
         setLoading(false);
     };
-
-    const updateFeature = (phaseIndex: number, featureIndex: number, val: string) => {
-      const newRoadmap = [...roadmap];
-      newRoadmap[phaseIndex].features[featureIndex] = val;
-      setRoadmap(newRoadmap);
-    }
-
-    const removeFeature = (phaseIndex: number, featureIndex: number) => {
-       const newRoadmap = [...roadmap];
-       newRoadmap[phaseIndex].features.splice(featureIndex, 1);
-       setRoadmap(newRoadmap);
-    }
-
-    const addFeature = (phaseIndex: number) => {
-        const newRoadmap = [...roadmap];
-        newRoadmap[phaseIndex].features.push("New Feature");
-        setRoadmap(newRoadmap);
-    }
-
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-extrabold text-sidebar">8. PRODUCT ROADMAP</h2>
-                <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
-                    {loading ? 'Planning...' : '✨ Generate Roadmap'}
-                </button>
-            </div>
-            
-            <div className="space-y-4">
-                {roadmap.map((phase, idx) => (
-                    <div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-accent">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-800">{phase.phase}</h3>
-                                <p className="text-sm text-gray-500 font-medium">Duration: {phase.duration}</p>
-                            </div>
-                            <span className="bg-accent/10 text-accent px-3 py-1 rounded text-xs font-bold uppercase">{phase.focus}</span>
-                        </div>
-                        <div className="space-y-2">
-                             <h4 className="text-xs font-bold text-gray-400 uppercase">Associated Stories / Features</h4>
-                            {phase.features.map((f: string, i: number) => (
-                                <div key={i} className="flex items-center gap-2 bg-gray-50 p-2 rounded group">
-                                    <span className="w-2 h-2 rounded-full bg-sidebar shrink-0"></span>
-                                    <input 
-                                      className="w-full bg-transparent border-none text-sm text-gray-700 focus:ring-0"
-                                      value={f}
-                                      onChange={e => updateFeature(idx, i, e.target.value)}
-                                    />
-                                    <button onClick={() => removeFeature(idx, i)} className="text-gray-400 hover:text-red-500 px-2 opacity-0 group-hover:opacity-100">×</button>
-                                </div>
-                            ))}
-                            <button onClick={() => addFeature(idx)} className="text-xs text-accent font-bold hover:underline">+ Add Feature</button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            {roadmap.length > 0 && (
-                <button onClick={() => onSave({ items: roadmap })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Roadmap</button>
-            )}
+            <div className="flex justify-between items-center"><h2 className="text-3xl font-extrabold text-sidebar">8. PRODUCT ROADMAP</h2><button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">{loading ? 'Planning...' : '✨ Generate Roadmap'}</button></div>
+            <div className="space-y-4">{roadmap.map((phase, idx) => (<div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-accent"><h3 className="text-xl font-bold text-gray-800">{phase.phase}</h3><p className="text-sm text-gray-500 font-medium">Duration: {phase.duration}</p></div>))}</div>
+            {roadmap.length > 0 && <button onClick={() => onSave({ items: roadmap })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Roadmap</button>}
         </div>
     );
 };
@@ -1055,6 +568,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                 title: s.title,
                 description: s.description,
                 acceptanceCriteria: s.acceptanceCriteria,
+                // AI service now returns estimates, if available use them, otherwise default to 0
                 storyPoints: s.storyPoints || 0,
                 estimatedHours: s.estimatedHours || 0,
                 status: 'todo',
@@ -1118,6 +632,37 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
         });
         alert(`Sprint ${sprintData.number} Started!`);
         setView('board');
+    };
+
+    const completeSprint = async () => {
+        if (!confirm("Are you sure you want to complete the sprint? Unfinished stories will be moved to the backlog.")) return;
+
+        // Move incomplete stories back to backlog
+        const updatedEpics = localEpics.map(epic => ({
+            ...epic,
+            stories: epic.stories.map(s => {
+                if (s.isInSprint && s.status !== 'done') {
+                    return { ...s, isInSprint: false, status: 'todo' as const };
+                }
+                return s;
+            })
+        }));
+
+        // Archive Sprint (in a real app, we would push to a sprints collection)
+        const sprintData = {
+            ...project.phases.sprint,
+            isActive: false,
+            completedAt: new Date().toISOString()
+        };
+
+        const projectRef = doc(db, 'projects', project.id);
+        await updateDoc(projectRef, { 
+             "phases.backlog.epics": updatedEpics,
+             "phases.sprint": sprintData
+        });
+        setLocalEpics(updatedEpics);
+        alert("Sprint Completed! Incomplete stories moved to Backlog.");
+        setView('planning');
     };
 
     const saveChanges = async () => {
@@ -1203,16 +748,18 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
             const actual = payload.find((p: any) => p.dataKey === 'actual');
             const ideal = payload.find((p: any) => p.dataKey === 'ideal');
             const diff = actual?.value - ideal?.value;
-            const diffFormatted = diff ? diff.toFixed(1) : '0';
+            const diffFormatted = diff ? Math.abs(diff).toFixed(1) : '0';
 
             return (
                 <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-xl text-xs">
                     <p className="font-bold text-gray-700 mb-2">Day {label}</p>
-                    <p className="text-red-500 font-bold">Actual: {actual?.value}h</p>
+                    <p className="text-[#F87171] font-bold">Actual: {actual?.value}h</p>
                     <p className="text-gray-400">Ideal: {ideal?.value.toFixed(1)}h</p>
-                    <div className={`mt-2 pt-2 border-t font-bold ${diff > 0 ? 'text-orange-500' : 'text-green-600'}`}>
-                         {diff > 0 ? `+${diffFormatted}h (Late)` : `${diffFormatted}h (Ahead)`}
-                    </div>
+                    {diff !== undefined && (
+                        <div className={`mt-2 pt-2 border-t font-bold ${diff > 0 ? 'text-red-500' : 'text-green-600'}`}>
+                            {diff > 0 ? `+${diffFormatted}h (Behind)` : `-${diffFormatted}h (Ahead)`}
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -1222,59 +769,62 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
     const BurndownChart = () => {
         if (!project.phases.sprint?.startDate) return <div className="p-10 text-center text-gray-400">Start Sprint to view Burndown</div>;
 
-        const totalHours = getSprintStories().reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
-        // Calculate Total Sprint Days (Duration weeks * 7 days)
+        const stories = getSprintStories();
+        const totalHours = stories.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
+        // Using provided duration in weeks to calculate days. Assuming 7 days a week for simplicity in chart x-axis.
         const sprintDays = duration * 7;
         const startDate = new Date(project.phases.sprint.startDate).getTime();
         const now = Date.now();
         
         const data = [];
+        
+        // CRITICAL RULE: Day 0 - Ideal and Actual start at same point
+        data.push({ day: 0, ideal: totalHours, actual: totalHours });
+
         const idealSlope = totalHours / sprintDays;
 
-        // Determine sprint status based on latest data point
-        let isAhead = false;
-        let isBehind = false;
-        let diff = 0;
-
-        for (let i = 0; i <= sprintDays; i++) {
-            // Timestamp for end of Day 'i'
+        for (let i = 1; i <= sprintDays; i++) {
             const dayTimestamp = startDate + (i * 24 * 60 * 60 * 1000);
             
             // Ideal Logic: Linear drop
             const ideal = Math.max(0, totalHours - (idealSlope * i));
 
-            // Actual Logic:
+            // Actual Logic
             let actual = null;
-            // Only plot 'actual' if this day has passed or is today (within 24h buffer)
-            if (dayTimestamp <= (now + 86400000)) {
-                // Sum estimated hours of all DONE stories completed ON OR BEFORE this day
-                const storiesCompletedByNow = getSprintStories().filter(s => 
+            // Only plot 'actual' if the day is in the past or is today (within a reasonable buffer)
+            if (startDate + ((i-1) * 24 * 60 * 60 * 1000) <= now) {
+                 const completedStories = stories.filter(s => 
                     s.status === 'done' && s.completedAt && s.completedAt <= dayTimestamp
                 );
-                
-                const hoursCompleted = storiesCompletedByNow.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
-                actual = Math.max(0, totalHours - hoursCompleted);
-
-                // Update status flags based on latest calculated day
-                diff = actual - ideal;
-                isAhead = diff < 0;
-                isBehind = diff > 0;
+                const hoursDone = completedStories.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
+                actual = Math.max(0, totalHours - hoursDone);
             }
 
-            data.push({
-                day: i,
-                ideal: ideal,
-                actual: actual
-            });
+            data.push({ day: i, ideal, actual });
+        }
+
+        // Determine sprint status based on latest actual data point
+        const lastPoint = [...data].reverse().find(d => d.actual !== null);
+        let diff = 0;
+        let status = 'ontrack'; // ahead, behind, ontrack
+        if (lastPoint) {
+            diff = lastPoint.actual - lastPoint.ideal;
+            if (diff < -5) status = 'ahead';
+            else if (diff > 5) status = 'behind';
         }
 
         return (
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-96">
                 <div className="flex justify-between items-center mb-6">
                     <h4 className="text-sm font-bold text-gray-500 uppercase">Sprint Burndown (Hours)</h4>
-                    {data.some(d => d.actual !== null) && (
-                        <div className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-2 ${isBehind ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-                            {isBehind ? `⚠️ ${diff.toFixed(0)}h Behind` : `⚡ ${Math.abs(diff).toFixed(0)}h Ahead`}
+                    {lastPoint && (
+                        <div className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-2 
+                            ${status === 'behind' ? 'bg-red-50 text-red-600 border-red-200' : 
+                              status === 'ahead' ? 'bg-green-50 text-green-700 border-green-200' : 
+                              'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
+                            {status === 'behind' && `⚠️ ${diff.toFixed(0)}h Behind`}
+                            {status === 'ahead' && `⚡ ${Math.abs(diff).toFixed(0)}h Ahead`}
+                            {status === 'ontrack' && `✓ On Track`}
                         </div>
                     )}
                 </div>
@@ -1300,11 +850,12 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                             tickLine={false} 
                             tick={{fontSize: 12, fill: '#6B7280'}} 
                             label={{ value: 'Hours', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#9CA3AF' }}
+                            domain={[0, 'auto']}
                         />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend iconType="circle" />
                         
-                        {/* Ideal Trend - Dashed Gray */}
+                        {/* Ideal Trend - Gray Dashed */}
                         <Line 
                             type="linear" 
                             dataKey="ideal" 
@@ -1315,15 +866,15 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                             strokeWidth={2} 
                         />
                         
-                        {/* Actual Remaining - Solid Red with Area */}
+                        {/* Actual Remaining - Red Solid with Area */}
                         <Area 
                             type="monotone" 
                             dataKey="actual" 
-                            stroke="#EF4444" 
+                            stroke="#F87171" 
                             fill="url(#colorActual)" 
                             name="Actual Remaining" 
                             strokeWidth={3} 
-                            dot={{ fill: '#EF4444', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                            dot={{ fill: '#F87171', r: 4, strokeWidth: 2, stroke: '#fff' }}
                             connectNulls={false}
                         />
                     </ComposedChart>
@@ -1619,11 +1170,11 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                  
                  {view === 'refinement' && (
                      <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto pb-6">
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                              <div className="flex justify-between items-center mb-6">
                                 <div>
                                     <h3 className="text-2xl font-bold text-sidebar mb-2">Backlog Refinement</h3>
-                                    <p className="text-gray-500">Use AI to split large stories (vertical slicing) into manageable chunks.</p>
+                                    <p className="text-gray-500">Select user stories from the sprint (or backlog) to split into smaller increments.</p>
                                 </div>
                              </div>
                              
@@ -1637,6 +1188,10 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                                                     <p className="font-bold text-gray-800">{story.title}</p>
                                                 </div>
                                                 <p className="text-sm text-gray-500 line-clamp-1">{story.description}</p>
+                                                <div className="flex gap-2 mt-2">
+                                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">SP: {story.storyPoints}</span>
+                                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">Hours: {story.estimatedHours}h</span>
+                                                </div>
                                             </div>
                                             <button 
                                                 onClick={() => refineStory(story.id)}
@@ -1685,8 +1240,15 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                  {view === 'retrospective' && (
                      <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto pb-6">
                          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                             <h3 className="text-2xl font-bold text-sidebar mb-2">Sprint Retrospective</h3>
-                             <p className="text-gray-500 mb-6">Inspect and adapt. How can we improve our process?</p>
+                             <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-sidebar mb-2">Sprint Retrospective</h3>
+                                    <p className="text-gray-500">Inspect and adapt. How can we improve our process?</p>
+                                </div>
+                                <button onClick={completeSprint} className="bg-red-500 text-white px-6 py-2 rounded-xl font-bold shadow-lg hover:bg-red-600 transition">
+                                    🏁 Complete Sprint
+                                </button>
+                             </div>
                              
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-96">
                                  <div className="bg-green-50 p-4 rounded-xl border border-green-100 flex flex-col">
@@ -1716,130 +1278,78 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
     );
 }
 
-const PhaseStats = ({ project }: { project: Project }) => {
-  return (
-    <div className="flex flex-col items-center justify-center h-full text-gray-500">
-      <div className="text-4xl mb-4">📈</div>
-      <h2 className="text-xl font-bold">Project Analytics</h2>
-      <p className="text-sm">Comprehensive charts and velocity tracking coming soon.</p>
-    </div>
-  );
+const ProjectRoute = () => {
+    const { projectId, phaseId } = useParams();
+    const [project, setProject] = useState<Project | null>(null);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!projectId) return;
+        const unsub = onSnapshot(doc(db, "projects", projectId), (d) => {
+            if (d.exists()) setProject({ id: d.id, ...d.data() } as Project);
+        });
+        return () => unsub();
+    }, [projectId]);
+
+    const handleSave = async (data: any) => {
+        if (!project || !phaseId) return;
+        const projectRef = doc(db, 'projects', project.id);
+        
+        let updates: any = {};
+        // Generic approach for phases that return partial data to merge
+        updates[`phases.${phaseId}`] = { ...project.phases[phaseId as keyof typeof project.phases], ...data };
+        
+        await updateDoc(projectRef, updates);
+    };
+
+    if (!project) return <div className="p-10 text-center">Loading...</div>;
+
+    const renderPhase = () => {
+        switch(phaseId) {
+            case 'mindset': return <PhaseMindset project={project} onSave={handleSave} />;
+            case 'vision': return <PhaseVision project={project} onSave={handleSave} />;
+            case 'objectives': return <PhaseObjectives project={project} onSave={handleSave} />;
+            case 'kpis': return <PhaseKPIs project={project} onSave={handleSave} />;
+            case 'backlog': return <PhaseBacklog project={project} onSave={handleSave} />;
+            case 'team': return <PhaseTeam project={project} onSave={handleSave} />;
+            case 'estimates': return <PhaseEstimates project={project} onSave={handleSave} />;
+            case 'roadmap': return <PhaseRoadmap project={project} onSave={handleSave} />;
+            case 'sprint': return <PhaseSprint project={project} onSave={handleSave} />;
+            default: return <div>Phase not implemented or found: {phaseId}</div>;
+        }
+    };
+
+    return (
+        <Layout currentProject={project}>
+            {renderPhase()}
+        </Layout>
+    );
 };
 
-const PhaseObeya = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
-  const [loading, setLoading] = useState(false);
-  const [risks, setRisks] = useState<Risk[]>(project.phases.obeya?.risks || []);
-
-  const handleGenerate = async () => {
-    setLoading(true);
-    try {
-      const result = await aiService.analyzeRisks(project);
-      setRisks(result);
-    } catch(e) { console.error(e); }
-    setLoading(false);
-  };
-
-  return (
-    <div className="space-y-6">
-       <div className="flex justify-between items-center">
-            <h2 className="text-3xl font-extrabold text-sidebar">11. OBEYA ROOM (RISKS)</h2>
-            <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
-                {loading ? 'Analyzing Risks...' : '⚡ Analyze Risks'}
-            </button>
-       </div>
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-           {risks.map((risk, i) => (
-               <div key={i} className={`bg-white p-6 rounded-2xl border-l-8 shadow-sm ${risk.impact === 'High' ? 'border-red-500' : risk.impact === 'Medium' ? 'border-yellow-500' : 'border-blue-500'}`}>
-                   <div className="flex justify-between items-start mb-2">
-                       <h4 className="font-bold text-gray-800 text-lg">{risk.risk}</h4>
-                       <span className="text-xs font-bold uppercase px-2 py-1 bg-gray-100 rounded">{risk.impact} Impact</span>
-                   </div>
-                   <p className="text-gray-600 text-sm mt-2"><strong className="text-gray-900">Mitigation:</strong> {risk.mitigation}</p>
-               </div>
-           ))}
-           {risks.length === 0 && <p className="text-gray-400">No risks identified yet.</p>}
-       </div>
-       {risks.length > 0 && (
-           <button onClick={() => onSave({ risks })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Risks</button>
-       )}
-    </div>
-  );
-};
-
-const ProjectView = () => {
-  const { projectId, phaseId } = useParams();
-  const [project, setProject] = useState<Project | null>(null);
+const App = () => {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!projectId) return;
-    const unsubscribe = onSnapshot(doc(db, "projects", projectId), (docSnapshot) => {
-      if (docSnapshot.exists()) {
-        setProject({ id: docSnapshot.id, ...docSnapshot.data() } as Project);
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      if (u) {
+        setUser({ uid: u.uid, email: u.email, displayName: u.displayName, role: 'user' });
+      } else {
+        setUser(null);
       }
       setLoading(false);
     });
     return () => unsubscribe();
-  }, [projectId]);
-
-  const handlePhaseSave = async (phaseData: any) => {
-    if (!project || !phaseId) return;
-    const projectRef = doc(db, 'projects', project.id);
-    const phaseKey = `phases.${phaseId}`;
-    const currentPhaseData = project.phases[phaseId as keyof typeof project.phases] || {};
-    
-    await updateDoc(projectRef, {
-        [phaseKey]: { ...currentPhaseData, ...phaseData }
-    });
-  };
-
-  if (loading) return <div className="h-screen flex items-center justify-center text-gray-500">Loading project...</div>;
-  if (!project) return <div className="h-screen flex items-center justify-center text-gray-500">Project not found</div>;
-
-  const renderPhase = () => {
-    switch (phaseId) {
-      case 'mindset': return <PhaseMindset project={project} onSave={handlePhaseSave} />;
-      case 'vision': return <PhaseVision project={project} onSave={handlePhaseSave} />;
-      case 'objectives': return <PhaseObjectives project={project} onSave={handlePhaseSave} />;
-      case 'kpis': return <PhaseKPIs project={project} onSave={handlePhaseSave} />;
-      case 'backlog': return <PhaseBacklog project={project} onSave={handlePhaseSave} />;
-      case 'team': return <PhaseTeam project={project} onSave={handlePhaseSave} />;
-      case 'estimates': return <PhaseEstimates project={project} onSave={handlePhaseSave} />;
-      case 'roadmap': return <PhaseRoadmap project={project} onSave={handlePhaseSave} />;
-      case 'sprint': return <PhaseSprint project={project} onSave={handlePhaseSave} />;
-      case 'stats': return <PhaseStats project={project} />;
-      case 'obeya': return <PhaseObeya project={project} onSave={handlePhaseSave} />;
-      default: return <Navigate to={`/project/${projectId}/mindset`} />;
-    }
-  };
-
-  return (
-    <Layout currentProject={project}>
-      {renderPhase()}
-    </Layout>
-  );
-};
-
-const App = () => {
-  const [user, setUser] = useState<any>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setAuthLoading(false);
-    });
-    return () => unsubscribe();
   }, []);
 
-  if (authLoading) return <div className="h-screen flex items-center justify-center bg-bg text-sidebar font-bold">SCRUM AI Loading...</div>;
+  if (loading) return <div className="flex items-center justify-center h-screen bg-bg text-sidebar">Loading Scrum AI...</div>;
 
   return (
     <HashRouter>
       <Routes>
         <Route path="/login" element={!user ? <Login /> : <Navigate to="/projects" />} />
-        <Route path="/projects" element={user ? <ProjectList /> : <Navigate to="/login" />} />
-        <Route path="/project/:projectId/:phaseId" element={user ? <ProjectView /> : <Navigate to="/login" />} />
+        <Route path="/projects" element={user ? <Layout currentProject={null}><ProjectList /></Layout> : <Navigate to="/login" />} />
+        <Route path="/project/:projectId/:phaseId" element={user ? <ProjectRoute /> : <Navigate to="/login" />} />
         <Route path="/" element={<Navigate to={user ? "/projects" : "/login"} />} />
       </Routes>
     </HashRouter>

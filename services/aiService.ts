@@ -189,14 +189,16 @@ export const aiService = {
       Original Story: "${storyTitle}"
       Description: "${storyDescription}"
       
+      You MUST estimate the Story Points and Estimated Hours for each new slice, ensuring they are smaller than the original might have been.
+      
       Output JSON array of new stories:
       [
         {
           "title": "Sub-story Title",
           "description": "Detailed description",
           "acceptanceCriteria": ["AC 1", "AC 2"],
-          "storyPoints": 0,
-          "estimatedHours": 0
+          "storyPoints": 3,
+          "estimatedHours": 5
         }
       ]
     `;
