@@ -2522,9 +2522,13 @@ const PhaseReleasePlanner = ({ project, onSave }: { project: Project, onSave: (d
     const [showSimulation, setShowSimulation] = useState(false);
 
     useEffect(() => {
+        console.log("PhaseReleasePlanner useEffect: project.phases.strategicPlanner changed", project.phases.strategicPlanner);
         if (project.phases.strategicPlanner) {
+            console.log("Updating local plan from props:", project.phases.strategicPlanner);
             setPlan(project.phases.strategicPlanner);
             setMonteCarlo(project.phases.strategicPlanner.monteCarlo);
+        } else {
+            console.log("project.phases.strategicPlanner is falsy/undefined");
         }
     }, [project.phases.strategicPlanner]);
 
@@ -2566,7 +2570,8 @@ const PhaseReleasePlanner = ({ project, onSave }: { project: Project, onSave: (d
             };
 
             setPlan(newPlan);
-            onSave({ strategicPlanner: newPlan });
+            onSave(newPlan);
+            // onSave({ strategicPlanner: newPlan });
             console.log("Plan saved successfully");
 
         } catch (e) {
@@ -2598,7 +2603,8 @@ const PhaseReleasePlanner = ({ project, onSave }: { project: Project, onSave: (d
             const updatedPlan = { ...plan, monteCarlo: result };
             setPlan(updatedPlan);
             setMonteCarlo(result);
-            onSave({ strategicPlanner: updatedPlan });
+            onSave(updatedPlan);
+            // onSave({ strategicPlanner: updatedPlan });
             setShowSimulation(true);
         } catch (e) {
             console.error(e);
