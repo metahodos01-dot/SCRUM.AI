@@ -13,6 +13,161 @@ import {
 
 // --- Components for specific pages/phases ---
 
+const LandingPage = () => {
+  const navigate = useNavigate();
+  const user = auth.currentUser;
+
+  return (
+    <div className="min-h-screen bg-white font-sans text-gray-900">
+      {/* Header / Nav */}
+      <header className="fixed w-full bg-white/90 backdrop-blur-sm z-50 border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-center relative">
+           <div className="text-center">
+              <div className="flex justify-center gap-1 mb-1">
+                 <div className="w-2 h-2 rounded-full bg-[#FF5A6E]"></div>
+                 <div className="w-2 h-2 rounded-full bg-[#FF9B5A]"></div>
+                 <div className="w-2 h-2 rounded-full bg-[#2E3340]"></div>
+              </div>
+              <h1 className="text-sm tracking-[0.3em] font-medium text-gray-800">METÀ HODÒS</h1>
+              <p className="text-[0.5rem] tracking-[0.4em] text-gray-400 uppercase mt-1">Persone • Agilità • Risultati</p>
+           </div>
+           <button 
+             onClick={() => user ? navigate('/projects') : navigate('/login')}
+             className="absolute right-6 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-600 hover:text-[#FF9B5A] transition uppercase"
+           >
+             {user ? 'Dashboard' : 'Login'}
+           </button>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="pt-40 pb-20 px-6 text-center">
+        <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-[#2E3340] mb-6">
+          Agile Academy.AI
+        </h1>
+        <p className="text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto mb-2">
+          L'evoluzione del mindset Agile potenziata dall'AI.
+        </p>
+        <p className="text-lg text-gray-500 max-w-2xl mx-auto mb-10">
+          Il metodo scientifico applicato alle persone.
+        </p>
+        
+        <div className="flex justify-center gap-4 items-center">
+          <button 
+            onClick={() => user ? navigate('/projects') : navigate('/login')}
+            className="bg-[#FF9B5A] text-white px-8 py-4 rounded-full font-bold text-sm tracking-widest shadow-lg hover:bg-[#FF8A3A] transition transform hover:scale-105 uppercase"
+          >
+            {user ? 'VAI ALLA DASHBOARD' : 'INIZIA ORA'}
+          </button>
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-gray-600">
+            Scopri il metodo ↓
+          </span>
+        </div>
+      </section>
+
+      {/* Vision Section (Dark) */}
+      <section className="bg-[#2E3340] text-white py-24 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mb-16">
+            <div>
+              <span className="text-[#FF9B5A] text-xs font-bold tracking-[0.2em] uppercase mb-4 block">La Nostra Visione</span>
+              <h2 className="text-5xl md:text-6xl font-bold leading-tight">
+                Rendere l'eccellenza strategica <span className="text-[#FF9B5A]">semplice</span>, umana e immediata.
+              </h2>
+              <div className="mt-8 relative">
+                 <p className="text-gray-400 text-lg leading-relaxed relative z-10">
+                   Trasformiamo la complessità in risultati pratici stando <span className="text-white border-b-2 border-[#FF5A6E]">"nel fango"</span> con i leader, parlando un linguaggio diretto e usando un approccio empatico.
+                 </p>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Card 1 */}
+              <div className="bg-[#383D4B] p-8 rounded-3xl hover:bg-[#404656] transition border border-gray-700">
+                <div className="text-2xl mb-4">🤝</div>
+                <h3 className="font-bold text-sm tracking-widest uppercase mb-2">Empatia Operativa</h3>
+                <p className="text-xs text-gray-400 leading-relaxed">Sentiamo le sfide del team sulla nostra pelle.</p>
+              </div>
+               {/* Card 2 */}
+               <div className="bg-[#383D4B] p-8 rounded-3xl hover:bg-[#404656] transition border border-gray-700">
+                <div className="text-2xl mb-4">⚡</div>
+                <h3 className="font-bold text-sm tracking-widest uppercase mb-2">Semplicità Radicale</h3>
+                <p className="text-xs text-gray-400 leading-relaxed">Tagliamo il superfluo per arrivare al valore.</p>
+              </div>
+               {/* Card 3 */}
+               <div className="bg-[#383D4B] p-8 rounded-3xl hover:bg-[#404656] transition border border-gray-700">
+                <div className="text-2xl mb-4">🛠️</div>
+                <h3 className="font-bold text-sm tracking-widest uppercase mb-2">Toolbox Infinita</h3>
+                <p className="text-xs text-gray-400 leading-relaxed">Non solo martelli, ma un intero arsenale agile.</p>
+              </div>
+               {/* Card 4 */}
+               <div className="bg-[#383D4B] p-8 rounded-3xl hover:bg-[#404656] transition border border-gray-700">
+                <div className="text-2xl mb-4">⭕</div>
+                <h3 className="font-bold text-sm tracking-widest uppercase mb-2">Zero Ego</h3>
+                <p className="text-xs text-gray-400 leading-relaxed">Il risultato del progetto viene prima di noi.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Steps Section */}
+      <section className="py-24 px-6 bg-[#F3F4F6]">
+         <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+               <span className="text-gray-400 text-xs font-bold tracking-[0.2em] uppercase border-b-2 border-[#FF5A6E] pb-2">Il Percorso Formativo</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+               {/* Step 1 */}
+               <div className="bg-white p-10 rounded-[2.5rem] shadow-sm hover:shadow-xl transition duration-300">
+                  <span className="text-6xl font-black text-gray-100 mb-6 block">01</span>
+                  <h3 className="text-2xl font-bold text-[#2E3340] mb-2">COMUNE:</h3>
+                  <h3 className="text-2xl font-bold text-[#2E3340] mb-6">FONDAMENTA</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-8">
+                     Giorno 1 & 2: Abbattimento silos, cultura Fail-Safe e la grande simulazione LEGO Scrum per testare il flusso.
+                  </p>
+                  <span className="text-[#FF5A6E] text-[10px] font-bold tracking-widest uppercase">Mindset & Esecuzione</span>
+               </div>
+
+               {/* Step 2 */}
+               <div className="bg-white p-10 rounded-[2.5rem] shadow-sm hover:shadow-xl transition duration-300 transform md:-translate-y-4">
+                  <span className="text-6xl font-black text-gray-100 mb-6 block">02</span>
+                  <h3 className="text-2xl font-bold text-[#2E3340] mb-6">SCRUM MASTER</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-8">
+                     Giorno 3: Servant Leadership, facilitazione avanzata e analisi delle metriche per abilitare l'autonomia del team.
+                  </p>
+                  <span className="text-green-500 text-[10px] font-bold tracking-widest uppercase">Coaching & Facilitazione</span>
+               </div>
+
+               {/* Step 3 */}
+               <div className="bg-white p-10 rounded-[2.5rem] shadow-sm hover:shadow-xl transition duration-300">
+                  <span className="text-6xl font-black text-[#FF9B5A]/20 mb-6 block">03</span>
+                  <h3 className="text-2xl font-bold text-[#2E3340] mb-6">PRODUCT OWNER</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed mb-8">
+                     Giorno 4: Massimizzazione del valore, prioritizzazione strategica e Workshop finale sul caso reale SACMI.
+                  </p>
+                  <span className="text-[#FF9B5A] text-[10px] font-bold tracking-widest uppercase">Visione & Business</span>
+               </div>
+            </div>
+         </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 bg-white text-center">
+         <div className="flex justify-center gap-1 mb-4">
+            <div className="w-2 h-2 rounded-full bg-[#FF5A6E]"></div>
+            <div className="w-2 h-2 rounded-full bg-[#FF9B5A]"></div>
+            <div className="w-2 h-2 rounded-full bg-[#2E3340]"></div>
+         </div>
+         <h4 className="text-lg tracking-[0.3em] font-medium text-gray-800 mb-2">METÀ HODÒS</h4>
+         <p className="text-[0.6rem] tracking-[0.2em] text-gray-400 uppercase mb-8">Persone • Agilità • Risultati</p>
+         <p className="text-xs text-gray-400">© 2025 Meta Hodos. All rights reserved.</p>
+      </footer>
+    </div>
+  );
+};
+
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,8 +190,9 @@ const Login = () => {
 
   return (
     <div className="flex items-center justify-center h-screen bg-sidebar">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
-        <h1 className="text-2xl font-extrabold text-sidebar mb-6 text-center">SCRUM AI MANAGER</h1>
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-96 relative">
+        <button onClick={() => navigate('/')} className="absolute top-4 left-4 text-gray-400 hover:text-gray-600">← Back</button>
+        <h1 className="text-2xl font-extrabold text-sidebar mb-6 text-center mt-4">SCRUM AI MANAGER</h1>
         <form onSubmit={handleAuthAction} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Email</label>
@@ -148,7 +304,7 @@ const ProjectList = () => {
   );
 };
 
-// --- Phases Components ---
+// --- Phases Components (1-8 & Sprint) ---
 
 const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
   const [accepted, setAccepted] = useState(project.phases.mindset?.completed || false);
@@ -416,8 +572,8 @@ const PhaseRoadmap = ({ project, onSave }: { project: Project, onSave: (data: an
 };
 
 const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
-    // Tabs state
-    const [view, setView] = useState<'planning' | 'board' | 'refinement' | 'review' | 'retrospective'>('board');
+    // Tabs state - REFINEMENT MOVED FIRST
+    const [view, setView] = useState<'refinement' | 'planning' | 'board' | 'review' | 'retrospective'>('refinement');
     // Local Epics state (for drag/drop and editing before save)
     const [localEpics, setLocalEpics] = useState<Epic[]>(project.phases.backlog?.epics || []);
     // Sprint Configuration
@@ -1072,7 +1228,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                  )}
 
                  <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                     {['planning', 'board', 'refinement', 'review', 'retrospective'].map((t) => (
+                     {['refinement', 'planning', 'board', 'review', 'retrospective'].map((t) => (
                          <button 
                             key={t}
                             onClick={() => setView(t as any)} 
@@ -1386,6 +1542,8 @@ const ProjectDetail = () => {
         case 'estimates': Component = PhaseEstimates; break;
         case 'roadmap': Component = PhaseRoadmap; break;
         case 'sprint': Component = PhaseSprint; break;
+        case 'stats': Component = () => <div className="p-10 text-center text-gray-500">Statistics - Coming Soon</div>; break;
+        case 'obeya': Component = () => <div className="p-10 text-center text-gray-500">Obeya Room - Coming Soon</div>; break;
         default: Component = () => <div>Select a phase</div>;
     }
 
@@ -1413,10 +1571,10 @@ const App = () => {
     return (
         <HashRouter>
             <Routes>
+                <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={!user ? <Login /> : <Navigate to="/projects" />} />
                 <Route path="/projects" element={user ? <ProjectList /> : <Navigate to="/login" />} />
                 <Route path="/project/:projectId/:phaseId" element={user ? <ProjectDetail /> : <Navigate to="/login" />} />
-                <Route path="/" element={<Navigate to={user ? "/projects" : "/login"} />} />
             </Routes>
         </HashRouter>
     );
