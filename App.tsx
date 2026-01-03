@@ -132,52 +132,192 @@ const ProjectList = () => {
 
 const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
   const [accepted, setAccepted] = useState(project.phases.mindset?.completed || false);
-  const [comment, setComment] = useState(project.phases.mindset?.comment || '');
+  const [tab, setTab] = useState<'mindset' | 'scrum' | 'coach'>('mindset');
+  const [question, setQuestion] = useState('');
+  const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+
+  const handleAskCoach = async () => {
+    if (!question.trim()) return;
+    const q = question;
+    setQuestion('');
+    setChatHistory([...chatHistory, { role: 'user', text: q }]);
+    setIsTyping(true);
+    try {
+      const answer = await aiService.askAgileCoach(q);
+      setChatHistory(prev => [...prev, { role: 'ai', text: answer }]);
+    } catch(e) { console.error(e); }
+    setIsTyping(false);
+  };
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <h2 className="text-3xl font-extrabold text-sidebar">1. AGILE MINDSET</h2>
-      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-        <div className="flex gap-8">
-           <div className="flex-1">
-             <h3 className="text-xl font-bold mb-4 text-gray-800">Traditional vs Agile</h3>
-             <p className="text-gray-600 mb-4">We are moving from a "Command & Control" structure to "Servant Leadership".</p>
-             <ul className="list-disc pl-5 space-y-2 text-gray-600">
-               <li>Individuals and interactions over processes and tools</li>
-               <li>Working software over comprehensive documentation</li>
-               <li>Customer collaboration over contract negotiation</li>
-               <li>Responding to change over following a plan</li>
-             </ul>
-           </div>
-           <div className="w-1/3 bg-blue-50 rounded-xl p-6 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-5xl mb-2">🔄</div>
-                <div className="font-bold text-sidebar">Scrum Cycle</div>
-              </div>
-           </div>
-        </div>
-      </div>
+    <div className="space-y-6 animate-fade-in h-[calc(100vh-140px)] flex flex-col">
+      <h2 className="text-3xl font-extrabold text-sidebar">1. AGILE MINDSET & SCRUM FRAMEWORK</h2>
       
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-         <textarea 
-            className="w-full border border-gray-200 rounded-xl p-4 h-32 focus:ring-accent focus:border-accent text-gray-800 bg-white"
-            placeholder="I understand the agile mindset because..."
-            value={comment}
-            onChange={e => setComment(e.target.value)}
-         />
-         <div className="mt-4 flex items-center gap-4">
-           <label className="flex items-center gap-2 cursor-pointer">
-             <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="w-5 h-5 text-accent rounded focus:ring-accent" />
-             <span className="font-medium text-gray-700">I acknowledge and accept the Agile principles</span>
-           </label>
-           <button 
-             onClick={() => onSave({ completed: accepted, comment })}
-             disabled={!accepted}
-             className="ml-auto bg-accent text-white px-8 py-3 rounded-xl font-bold disabled:opacity-50 hover:bg-opacity-90"
-           >
-             Save & Continue
-           </button>
-         </div>
+      {/* Tabs */}
+      <div className="flex gap-4 border-b border-gray-200 pb-1">
+         <button onClick={() => setTab('mindset')} className={`pb-2 px-4 font-bold ${tab === 'mindset' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}>The Mindset Shift</button>
+         <button onClick={() => setTab('scrum')} className={`pb-2 px-4 font-bold ${tab === 'scrum' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}>Scrum Framework</button>
+         <button onClick={() => setTab('coach')} className={`pb-2 px-4 font-bold ${tab === 'coach' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}>🤖 AI Agile Coach</button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+          {tab === 'mindset' && (
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="bg-gray-200 p-8 rounded-2xl opacity-70 grayscale transition hover:grayscale-0 hover:opacity-100">
+                      <h3 className="text-xl font-bold text-gray-600 mb-4">🏭 Traditional (Waterfall)</h3>
+                      <p className="text-sm text-gray-500 mb-4">Fixed scope, fixed timeline, command & control. Changes are expensive and resisted.</p>
+                      <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
+                          <li>Detailed upfront planning</li>
+                          <li>Strict phase gates (Requirements -> Design -> Code -> Test)</li>
+                          <li>Value delivered only at the end</li>
+                          <li>Process-centric</li>
+                      </ul>
+                  </div>
+                  <div className="bg-white p-8 rounded-2xl shadow-lg border-2 border-accent/20 transform hover:scale-105 transition duration-300">
+                      <h3 className="text-xl font-bold text-accent mb-4">🚀 Agile Mindset</h3>
+                      <p className="text-sm text-gray-600 mb-4">Iterative, incremental, empirical. We embrace change to delight the customer.</p>
+                      <ul className="list-disc pl-5 space-y-2 text-gray-700 text-sm">
+                          <li><strong className="text-sidebar">Empiricism:</strong> Transparency, Inspection, Adaptation.</li>
+                          <li>Working software over docs.</li>
+                          <li>Responding to change over following a plan.</li>
+                          <li>Value delivered continuously.</li>
+                      </ul>
+                  </div>
+              </div>
+              
+              <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 text-center">
+                  <h4 className="font-bold text-blue-900 mb-2">The 3 Pillars of Empiricism</h4>
+                  <div className="flex justify-center gap-10 mt-4">
+                      <div className="bg-white p-4 rounded-xl shadow-sm w-40">
+                          <div className="text-3xl mb-2">🔍</div>
+                          <div className="font-bold text-sm">Transparency</div>
+                      </div>
+                      <div className="bg-white p-4 rounded-xl shadow-sm w-40">
+                          <div className="text-3xl mb-2">🧐</div>
+                          <div className="font-bold text-sm">Inspection</div>
+                      </div>
+                      <div className="bg-white p-4 rounded-xl shadow-sm w-40">
+                          <div className="text-3xl mb-2">🔄</div>
+                          <div className="font-bold text-sm">Adaptation</div>
+                      </div>
+                  </div>
+              </div>
+
+              <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm justify-end">
+                <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="w-5 h-5 text-accent rounded focus:ring-accent" />
+                    <span className="font-medium text-gray-700">I acknowledge and accept the Agile principles</span>
+                </label>
+                <button 
+                    onClick={() => onSave({ completed: accepted, comment: 'Accepted Agile Mindset' })}
+                    disabled={!accepted}
+                    className="bg-accent text-white px-6 py-2 rounded-xl font-bold disabled:opacity-50"
+                >
+                    Mark as Complete
+                </button>
+              </div>
+            </div>
+          )}
+
+          {tab === 'scrum' && (
+              <div className="space-y-6">
+                  <div className="relative bg-white rounded-2xl shadow-sm p-8 overflow-hidden">
+                      <div className="absolute top-0 left-0 w-2 h-full bg-accent"></div>
+                      <h3 className="text-2xl font-extrabold text-sidebar mb-6">The Scrum Framework</h3>
+                      
+                      {/* Interactive Roles */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                          <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 hover:shadow-md transition cursor-help group">
+                              <div className="text-2xl mb-2">👑</div>
+                              <h4 className="font-bold text-indigo-900">Product Owner</h4>
+                              <p className="text-xs text-indigo-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Maximizes value, manages Product Backlog.</p>
+                          </div>
+                          <div className="bg-pink-50 p-4 rounded-xl border border-pink-100 hover:shadow-md transition cursor-help group">
+                              <div className="text-2xl mb-2">🛡️</div>
+                              <h4 className="font-bold text-pink-900">Scrum Master</h4>
+                              <p className="text-xs text-pink-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Coaches team, removes impediments, upholds Scrum.</p>
+                          </div>
+                          <div className="bg-green-50 p-4 rounded-xl border border-green-100 hover:shadow-md transition cursor-help group">
+                              <div className="text-2xl mb-2">🛠️</div>
+                              <h4 className="font-bold text-green-900">Developers</h4>
+                              <p className="text-xs text-green-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Creates "Done" Increment, self-managing.</p>
+                          </div>
+                      </div>
+
+                      {/* The Sprint Cycle */}
+                      <div className="border-t pt-6">
+                          <h4 className="font-bold text-gray-500 uppercase text-xs mb-4">The Sprint (Heart of Scrum)</h4>
+                          <div className="flex items-center gap-2 overflow-x-auto pb-4">
+                              <div className="min-w-[120px] bg-white border-2 border-gray-200 p-3 rounded-lg text-center">
+                                  <div className="text-xs font-bold text-gray-400">Step 1</div>
+                                  <div className="font-bold text-sm">Sprint Planning</div>
+                              </div>
+                              <div className="text-gray-400">→</div>
+                              <div className="min-w-[120px] bg-accent/10 border-2 border-accent p-3 rounded-lg text-center">
+                                  <div className="text-xs font-bold text-accent">1-4 Weeks</div>
+                                  <div className="font-bold text-sm">Daily Scrum</div>
+                              </div>
+                              <div className="text-gray-400">→</div>
+                              <div className="min-w-[120px] bg-white border-2 border-gray-200 p-3 rounded-lg text-center">
+                                  <div className="text-xs font-bold text-gray-400">Inspect Product</div>
+                                  <div className="font-bold text-sm">Sprint Review</div>
+                              </div>
+                              <div className="text-gray-400">→</div>
+                              <div className="min-w-[120px] bg-white border-2 border-gray-200 p-3 rounded-lg text-center">
+                                  <div className="text-xs font-bold text-gray-400">Inspect Process</div>
+                                  <div className="font-bold text-sm">Retrospective</div>
+                              </div>
+                          </div>
+                      </div>
+                      
+                      {/* Values */}
+                      <div className="mt-6 flex flex-wrap gap-2">
+                          {['Commitment', 'Focus', 'Openness', 'Respect', 'Courage'].map(v => (
+                              <span key={v} className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold border border-gray-200">
+                                  {v}
+                              </span>
+                          ))}
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {tab === 'coach' && (
+              <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                  <div className="bg-gray-50 p-4 border-b">
+                      <h3 className="font-bold text-gray-700">Ask the Agile Coach</h3>
+                      <p className="text-xs text-gray-500">Ask about roles, ceremonies, or how to handle a situation.</p>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
+                      {chatHistory.length === 0 && (
+                          <div className="text-center text-gray-400 mt-10">
+                              <div className="text-4xl mb-2">🤖</div>
+                              <p>Hi! I'm your AI Agile Coach. Ask me anything about Scrum!</p>
+                          </div>
+                      )}
+                      {chatHistory.map((msg, i) => (
+                          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                              <div className={`max-w-[80%] p-3 rounded-xl text-sm ${msg.role === 'user' ? 'bg-sidebar text-white rounded-tr-none' : 'bg-white border shadow-sm text-gray-800 rounded-tl-none'}`}>
+                                  {msg.text}
+                              </div>
+                          </div>
+                      ))}
+                      {isTyping && <div className="text-xs text-gray-400 ml-2">Coach is typing...</div>}
+                  </div>
+                  <div className="p-4 bg-white border-t flex gap-2">
+                      <input 
+                        className="flex-1 border border-gray-300 rounded-xl px-4 py-2 focus:ring-accent focus:border-accent"
+                        placeholder="Type your question..."
+                        value={question}
+                        onChange={e => setQuestion(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleAskCoach()}
+                      />
+                      <button onClick={handleAskCoach} className="bg-accent text-white px-4 py-2 rounded-xl font-bold">Send</button>
+                  </div>
+              </div>
+          )}
       </div>
     </div>
   );
@@ -744,7 +884,7 @@ const PhaseRoadmap = ({ project, onSave }: { project: Project, onSave: (data: an
 
 const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     // Tabs state
-    const [view, setView] = useState<'planning' | 'board' | 'review' | 'retrospective'>('board');
+    const [view, setView] = useState<'planning' | 'board' | 'refinement' | 'review' | 'retrospective'>('board');
     // Local Epics state (for drag/drop and editing before save)
     const [localEpics, setLocalEpics] = useState<Epic[]>(project.phases.backlog?.epics || []);
     // Sprint Configuration
@@ -755,8 +895,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
     
     // Capacity Planning State
     const [memberCapacity, setMemberCapacity] = useState<Record<string, number>>(project.phases.sprint?.memberCapacity || {});
-    // Mood & Impediments State
-    const [moods, setMoods] = useState<Record<string, 'happy' | 'neutral' | 'sad' | 'stressed'>>(project.phases.sprint?.moods || {});
+    // Impediments State
     const [impediments, setImpediments] = useState<Impediment[]>(project.phases.sprint?.impediments || []);
     const [newImpediment, setNewImpediment] = useState('');
 
@@ -883,10 +1022,36 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
         setImpediments(prev => prev.map(imp => imp.id === id ? { ...imp, status: 'resolved' } : imp));
     }
 
-    // --- Mood Logic ---
-    const updateMood = (memberId: string, dayIndex: number, mood: 'happy' | 'neutral' | 'sad' | 'stressed') => {
-        setMoods(prev => ({ ...prev, [`${memberId}_${dayIndex}`]: mood }));
+    // --- Refinement Logic ---
+    const refineStory = async (storyId: string) => {
+        const story = getSprintStories().find(s => s.id === storyId) || getBacklogStories().find(s => s.id === storyId);
+        if(!story) return;
+
+        setAiLoading(true);
+        try {
+            const splitStories = await aiService.splitUserStory(story.title, story.description);
+            const newStories: UserStory[] = splitStories.map((s: any, idx: number) => ({
+                id: `split-${story.id}-${idx}`,
+                title: s.title,
+                description: s.description,
+                acceptanceCriteria: s.acceptanceCriteria,
+                storyPoints: s.storyPoints || 0,
+                estimatedHours: s.estimatedHours || 0,
+                status: 'todo',
+                isInSprint: story.isInSprint,
+                assigneeIds: story.assigneeIds
+            }));
+
+            // Replace original story with new ones in the same epic
+            setLocalEpics(prev => prev.map(epic => ({
+                ...epic,
+                stories: epic.stories.flatMap(s => s.id === storyId ? newStories : s)
+            })));
+            alert(`Story split into ${newStories.length} smaller stories!`);
+        } catch(e) { console.error(e); alert("Failed to refine story."); }
+        setAiLoading(false);
     }
+
 
     const generateGoal = async () => {
         const stories = getSprintStories();
@@ -941,7 +1106,6 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
              retrospective: retroNotes,
              goal: sprintGoal,
              memberCapacity: memberCapacity,
-             moods: moods,
              impediments: impediments,
              dailyMeetingDuration: dailyDurationMinutes
          };
@@ -956,9 +1120,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
              "phases.backlog.epics": localEpics
          };
          
-         // Dynamically add sprint fields to update map to avoid overwriting entire object if not needed, 
-         // but for deep nested simple objects commonly easier to merge or rewrite specific paths.
-         // Firestore update nested syntax:
+         // Dynamically add sprint fields to update map
          Object.keys(updatedSprintData).forEach(key => {
              updates[`phases.sprint.${key}`] = updatedSprintData[key];
          });
@@ -1025,19 +1187,16 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
 
         for (let i = 0; i <= sprintDays; i++) {
             const dayTimestamp = startDate + (i * 24 * 60 * 60 * 1000);
-            // "Actual" Logic: Only show point if it's the start day, OR a past day, OR a day logged in MoodBoard
-            const isLoggedDay = Object.keys(moods).some(k => k.endsWith(`_${i}`));
-            const isPast = dayTimestamp < Date.now();
             
+            // Actual Logic: Check which stories were completed BY this day
+            // Only plot 'actual' if the day has passed or is today
             let actual = null;
-
-            if (i === 0 || isPast || isLoggedDay) {
-                 const storiesDoneBeforeNow = getSprintStories().filter(s => 
-                    s.completedAt && s.completedAt <= dayTimestamp
-                 );
-                 const hoursDone = storiesDoneBeforeNow.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
-                 actual = totalHours - hoursDone;
-                 if (actual < 0) actual = 0;
+            if (dayTimestamp <= Date.now() + (24 * 60 * 60 * 1000)) {
+                const storiesCompleted = getSprintStories().filter(s => 
+                    s.status === 'done' && s.completedAt && s.completedAt <= dayTimestamp
+                );
+                const hoursCompleted = storiesCompleted.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
+                actual = Math.max(0, totalHours - hoursCompleted);
             }
 
             data.push({
@@ -1048,18 +1207,24 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
         }
 
         return (
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col h-64">
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col h-72">
                 <h4 className="text-sm font-bold text-gray-500 uppercase mb-4">Sprint Burndown (Hours)</h4>
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="day" label={{ value: 'Day', position: 'insideBottomRight', offset: -5 }} type="number" domain={[0, sprintDays]} tickCount={sprintDays + 1} />
-                        <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
+                    <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <defs>
+                            <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#FF5A6E" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#FF5A6E" stopOpacity={0}/>
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 12}} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12}} />
                         <Tooltip />
-                        <Legend />
-                        <Line type="linear" dataKey="ideal" stroke="#9CA3AF" strokeDasharray="5 5" name="Ideal Burn" dot={false} strokeWidth={2} />
-                        <Line type="monotone" dataKey="actual" stroke="#FF5A6E" strokeWidth={3} name="Actual Remaining" connectNulls={true} />
-                    </LineChart>
+                        <Legend iconType="circle" />
+                        <Line type="monotone" dataKey="ideal" stroke="#9CA3AF" strokeDasharray="5 5" name="Ideal Trend" dot={false} strokeWidth={2} />
+                        <Area type="monotone" dataKey="actual" stroke="#FF5A6E" fillOpacity={1} fill="url(#colorActual)" name="Actual Remaining" strokeWidth={3} />
+                    </AreaChart>
                 </ResponsiveContainer>
             </div>
         );
@@ -1091,63 +1256,6 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
         )
     }
 
-    const MoodBoard = () => {
-        const sprintDays = duration * 7;
-        const moodOptions = [
-            { id: 'happy', icon: '😄' },
-            { id: 'neutral', icon: '😐' },
-            { id: 'sad', icon: '😟' },
-            { id: 'stressed', icon: '😫' }
-        ];
-
-        return (
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
-                <h4 className="font-bold text-accent uppercase text-xs mb-3">Team Mood Board</h4>
-                <table className="min-w-full text-xs">
-                    <thead>
-                        <tr>
-                            <th className="text-left py-2 px-2 text-gray-500 w-24">Member</th>
-                            {Array.from({length: sprintDays}).map((_, i) => (
-                                <th key={i} className="py-2 px-1 text-center text-gray-400 min-w-[30px]">D{i}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {teamMembers.map(member => (
-                            <tr key={member.id} className="border-t border-gray-50">
-                                <td className="py-2 px-2 font-bold text-gray-700 truncate max-w-[100px]">{member.name}</td>
-                                {Array.from({length: sprintDays}).map((_, i) => {
-                                    const key = `${member.id}_${i}`;
-                                    const currentMood = moods[key];
-                                    return (
-                                        <td key={i} className="text-center p-1">
-                                            <div className="relative group">
-                                                <button className="text-lg hover:scale-110 transition">
-                                                    {moodOptions.find(m => m.id === currentMood)?.icon || '⚪'}
-                                                </button>
-                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 bg-white shadow-xl rounded-lg p-2 hidden group-hover:flex gap-1 z-10 border">
-                                                    {moodOptions.map(opt => (
-                                                        <button 
-                                                            key={opt.id} 
-                                                            onClick={() => updateMood(member.id, i, opt.id as any)}
-                                                            className="hover:bg-gray-100 rounded p-1"
-                                                        >
-                                                            {opt.icon}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </td>
-                                    )
-                                })}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        )
-    }
-
     const Column = ({ status, label, color }: any) => {
         const stories = getSprintStories().filter(s => s.status === status);
         return (
@@ -1160,7 +1268,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                 }}
             >
                 <h3 className={`font-bold text-sm uppercase mb-4 text-${color}-600`}>{label} ({stories.length})</h3>
-                <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar pb-20">
                     {stories.map(story => (
                         <div 
                             key={story.id} 
@@ -1243,7 +1351,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                  )}
 
                  <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                     {['planning', 'board', 'review', 'retrospective'].map((t) => (
+                     {['planning', 'board', 'refinement', 'review', 'retrospective'].map((t) => (
                          <button 
                             key={t}
                             onClick={() => setView(t as any)} 
@@ -1391,21 +1499,45 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                  )}
 
                  {view === 'board' && (
-                     <div className="flex flex-row h-full gap-4 overflow-hidden pb-2">
-                         {/* Left: Kanban */}
-                         <div className="flex-1 flex gap-4 min-w-0 overflow-x-auto">
+                     <div className="flex flex-col h-full gap-4 pb-2">
+                         <div className="flex-1 flex gap-4 min-w-0 overflow-x-auto h-1/2">
                              <Column status="todo" label="To Do" color="gray" />
                              <Column status="doing" label="Doing" color="blue" />
                              <Column status="done" label="Done" color="green" />
+                             
+                             <div className="w-80 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
+                                <DailyTimer />
+                                <ImpedimentsTracker />
+                             </div>
                          </div>
-                         
-                         {/* Right: Daily Dashboard */}
-                         <div className="w-1/3 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
-                             <DailyTimer />
-                             <MoodBoard />
-                             <ImpedimentsTracker />
-                             <BurndownChart />
-                         </div>
+                         <BurndownChart />
+                     </div>
+                 )}
+                 
+                 {view === 'refinement' && (
+                     <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto pb-6">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                             <h3 className="text-2xl font-bold text-sidebar mb-2">Backlog Refinement</h3>
+                             <p className="text-gray-500 mb-6">Use AI to split large stories (vertical slicing) into manageable chunks.</p>
+                             
+                             <div className="space-y-4">
+                                {localEpics.flatMap(e => e.stories).map(story => (
+                                    <div key={story.id} className="border p-4 rounded-xl flex justify-between items-center hover:bg-gray-50">
+                                        <div>
+                                            <p className="font-bold text-gray-800">{story.title}</p>
+                                            <p className="text-sm text-gray-500 line-clamp-1">{story.description}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => refineStory(story.id)}
+                                            disabled={aiLoading}
+                                            className="bg-sidebar text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-opacity-90 disabled:opacity-50"
+                                        >
+                                            {aiLoading ? 'Splitting...' : '✂️ Split with AI'}
+                                        </button>
+                                    </div>
+                                ))}
+                             </div>
+                        </div>
                      </div>
                  )}
 

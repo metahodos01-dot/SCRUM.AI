@@ -1,6 +1,26 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to safely get the API KEY avoiding "process is not defined" in Vite
+const getApiKey = () => {
+  // @ts-ignore
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    // @ts-ignore
+    // Vercel/Vite requires VITE_ prefix for client-side env vars
+    return import.meta.env.VITE_API_KEY || import.meta.env.API_KEY;
+  }
+  
+  try {
+    if (process.env.API_KEY) return process.env.API_KEY;
+  } catch (e) {
+    // process is not defined
+  }
+  return '';
+};
+
+const API_KEY = getApiKey();
+
+// Initialize AI. If key is missing, it will initialize but calls will fail (better than crashing app on load)
+const ai = new GoogleGenAI({ apiKey: API_KEY || "MISSING_KEY" });
 
 const MODEL_TEXT = 'gemini-3-flash-preview';
 
@@ -158,6 +178,45 @@ export const aiService = {
       model: MODEL_TEXT,
       contents: prompt,
       config: { responseMimeType: 'application/json' }
+    });
+    return response.text;
+  },
+
+  async splitUserStory(storyTitle: string, storyDescription: string) {
+    const prompt = `
+      Act as a Technical Product Owner. The following User Story is too big and needs to be split (Refinement) into 2-3 smaller, vertical slices that act as independent functional increments.
+      
+      Original Story: "${storyTitle}"
+      Description: "${storyDescription}"
+      
+      Output JSON array of new stories:
+      [
+        {
+          "title": "Sub-story Title",
+          "description": "Detailed description",
+          "acceptanceCriteria": ["AC 1", "AC 2"],
+          "storyPoints": 0,
+          "estimatedHours": 0
+        }
+      ]
+    `;
+    const response = await ai.models.generateContent({
+      model: MODEL_TEXT,
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+    return JSON.parse(response.text || '[]');
+  },
+
+  async askAgileCoach(question: string) {
+    const prompt = `
+      You are an expert Agile Coach and Scrum Master. Answer the user's question about Scrum, Agile Mindset, or Project Management.
+      Keep it educational, encouraging, and concise (max 100 words).
+      Question: "${question}"
+    `;
+    const response = await ai.models.generateContent({
+      model: MODEL_TEXT,
+      contents: prompt,
     });
     return response.text;
   },
