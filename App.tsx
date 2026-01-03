@@ -2521,6 +2521,13 @@ const PhaseReleasePlanner = ({ project, onSave }: { project: Project, onSave: (d
     const [monteCarlo, setMonteCarlo] = useState<MonteCarloResult | undefined>(plan?.monteCarlo);
     const [showSimulation, setShowSimulation] = useState(false);
 
+    useEffect(() => {
+        if (project.phases.strategicPlanner) {
+            setPlan(project.phases.strategicPlanner);
+            setMonteCarlo(project.phases.strategicPlanner.monteCarlo);
+        }
+    }, [project.phases.strategicPlanner]);
+
     const handleGeneratePlan = async () => {
         setLoading(true);
         try {
@@ -2641,7 +2648,7 @@ const PhaseReleasePlanner = ({ project, onSave }: { project: Project, onSave: (d
                     <div className="relative">
                         <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
                         <div className="space-y-8">
-                            {plan.phases.map((phase, index) => (
+                            {plan.phases?.map((phase, index) => (
                                 <div key={index} className="relative pl-16">
                                     <div className="absolute left-4 top-0 w-8 h-8 bg-sidebar text-white rounded-full flex items-center justify-center font-bold z-10 border-4 border-white">
                                         {index + 1}
