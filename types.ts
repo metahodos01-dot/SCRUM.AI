@@ -1,3 +1,4 @@
+
 export interface User {
   uid: string;
   email: string | null;
@@ -9,7 +10,7 @@ export interface Project {
   id: string;
   name: string;
   description: string;
-  language: 'it' | 'en'; // Added language selection
+  language: 'it' | 'en';
   createdBy: string;
   createdAt: number;
   status: 'draft' | 'in-progress' | 'completed';
@@ -21,15 +22,34 @@ export interface Project {
     backlog?: { epics: Epic[] };
     team?: { members: TeamMember[] };
     estimates?: { processed: boolean };
-    roadmap?: { items: RoadmapItem[] };
-    obeya?: { risks: Risk[] };
+    roadmap?: { 
+      items: RoadmapItem[]; 
+      mvpDescription?: string; 
+      sprintDuration?: number; 
+      memberAvailability?: Record<string, number>;
+    };
+    obeya?: { 
+      checklist: ObeyaChecklist;
+      roomImageUrl?: string;
+      renderedImageUrl?: string;
+    };
     sprint?: SprintData;
   };
+}
+
+export interface ObeyaChecklist {
+  visionBoard: boolean;
+  roadmap: boolean;
+  burndown: boolean;
+  teamBoard: boolean;
+  kpiDashboard: boolean;
+  impediments: boolean;
 }
 
 export interface TeamMember {
   id: string;
   name: string;
+  email?: string; // Added email
   role: string;
   skills: string[];
 }
@@ -63,7 +83,7 @@ export interface UserStory {
   status: 'todo' | 'doing' | 'done';
   assigneeIds?: string[];
   isInSprint?: boolean;
-  completedAt?: number; // Timestamp for Burndown calculation
+  completedAt?: number;
 }
 
 export interface Impediment {
@@ -79,43 +99,21 @@ export interface DailyStandup {
   date: string;
   oreCompletate: number;
   oreRimanenti: number;
-  taskCompletati: string[]; // IDs of stories completed this day
+  taskCompletati: string[];
 }
 
 export interface SprintData {
   isActive: boolean;
   number: number;
-  startDate: string; // ISO String
-  endDate: string; // ISO String
+  startDate: string;
+  endDate: string;
   durationWeeks: number;
   goal: string;
   memberCapacity?: Record<string, number>;
-  // Moods: key is "memberId_dayIndex" (0-based day of sprint), value is the mood string
   moods?: Record<string, 'happy' | 'neutral' | 'sad' | 'stressed'>;
   impediments?: Impediment[];
-  dailyMeetingDuration?: number; // Minutes, defaults to 15
-  dailyStandups?: DailyStandup[]; // Historic data for burndown
+  dailyMeetingDuration?: number;
+  dailyStandups?: DailyStandup[];
   review?: string;
   retrospective?: string;
-}
-
-// Deprecated separate interface in favor of nested SprintData
-export interface Sprint {
-  id: string;
-  number: number;
-  projectId: string;
-  status: 'planning' | 'active' | 'completed';
-  startDate: string;
-  endDate: string;
-  goal: string;
-  tasks: Task[];
-}
-
-export interface Task {
-  id: string;
-  storyId: string;
-  description: string;
-  status: 'todo' | 'doing' | 'done';
-  assigneeId?: string;
-  hoursRemaining: number;
 }

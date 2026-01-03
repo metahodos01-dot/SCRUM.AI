@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 // Helper to safely get the API KEY avoiding "process is not defined" in Vite
@@ -23,6 +24,8 @@ const API_KEY = getApiKey();
 const ai = new GoogleGenAI({ apiKey: API_KEY || "MISSING_KEY" });
 
 const MODEL_TEXT = 'gemini-3-flash-preview';
+// Using generic image model for obeya rendering placeholder
+const MODEL_IMAGE = 'gemini-2.5-flash-image'; 
 
 export const aiService = {
   async generateVision(inputs: any) {
@@ -135,25 +138,27 @@ export const aiService = {
     return JSON.parse(response.text || '[]');
   },
 
-  async generateRoadmap(vision: string, epics: any[]) {
+  async generateRoadmap(vision: string, epics: any[], mvpDesc: string, duration: number, availability: any) {
     // Extract titles for context
     const allStories = epics.flatMap((e:any) => e.stories.map((s:any) => s.title));
     
     const prompt = `
-      Act as a Product Manager. Create a release roadmap for the product.
+      Act as a Product Manager. Create a release roadmap.
       Vision: ${vision}
-      Available User Stories: ${JSON.stringify(allStories)}
+      MVP Focus: ${mvpDesc}
+      Sprint Duration: ${duration} weeks
+      Team Availability: ${JSON.stringify(availability)}
+      Available Stories: ${JSON.stringify(allStories)}
       
-      Group these EXACT User Stories into 3 Phases: "MVP", "V1.0", "V2.0".
-      Ensure the MVP contains the most critical stories.
+      Group User Stories into 3 Phases: "MVP", "V1.0", "V2.0" considering the MVP focus and capacity.
       
       Output JSON array:
       [
         { 
           "phase": "MVP", 
-          "duration": "2 months", 
+          "duration": "X sprints", 
           "focus": "Core Value Proposition", 
-          "features": ["Exact Story Title 1", "Exact Story Title 2"] 
+          "features": ["Story 1", "Story 2"] 
         },
         ...
       ]
@@ -189,7 +194,7 @@ export const aiService = {
       Original Story: "${storyTitle}"
       Description: "${storyDescription}"
       
-      You MUST estimate the Story Points and Estimated Hours for each new slice, ensuring they are smaller than the original might have been.
+      You MUST estimate the Story Points and Estimated Hours for each new slice.
       
       Output JSON array of new stories:
       [
@@ -223,20 +228,41 @@ export const aiService = {
     return response.text;
   },
 
-  async analyzeRisks(projectData: any) {
-    const prompt = `
-      Analyze risks for project: ${projectData.name}.
-      Vision: ${projectData.phases.vision?.text}
-      Objectives: ${projectData.phases.objectives?.text}
+  async generateObeyaRendering(imageBase64: string, checklist: any) {
+      // NOTE: For 'gemini-2.5-flash-image', we typically use generateContent with image parts for EDITING/ANALYSIS,
+      // but strictly speaking, text-to-image generation (creating a new rendering) requires specific Imagen models.
+      // Since specific Imagen models require distinct setup, here we simulate the prompt logic
+      // and return a description of what the rendering WOULD be, or use the flash model to analyze where to put things.
       
-      Output JSON array of 4 major risks:
-      [{ "risk": "Risk description", "impact": "High", "mitigation": "Mitigation strategy" }]
-    `;
-    const response = await ai.models.generateContent({
-      model: MODEL_TEXT,
-      contents: prompt,
-      config: { responseMimeType: 'application/json' }
-    });
-    return JSON.parse(response.text || '[]');
+      // For this demo, we will use text generation to "Describe" the placement layout effectively
+      // or return a placeholder URL if we can't do actual pixel generation in this specific restricted env.
+      
+      // However, if we want to "Edit" the image to add sticky notes (annotating), we can try:
+      
+      const prompt = `
+        You are an Agile Coach setting up an Obeya Room.
+        The user has uploaded a photo of their room.
+        Active elements to place: ${JSON.stringify(checklist)}.
+        
+        Analyze the image and describe exactly where to place each board (Vision, Roadmap, etc.) on the walls visible in the image.
+        Return a JSON object with "layoutDescription".
+      `;
+      
+      const imagePart = {
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: imageBase64
+        }
+      };
+      
+      const response = await ai.models.generateContent({
+        model: MODEL_TEXT, // Using text model to describe layout as image generation/edit is complex in this snippet context
+        contents: {
+            parts: [imagePart, { text: prompt }]
+        },
+        config: { responseMimeType: 'application/json' }
+      });
+      
+      return JSON.parse(response.text || '{}');
   }
 };

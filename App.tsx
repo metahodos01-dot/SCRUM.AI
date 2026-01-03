@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, doc, onSnapshot, updateDoc, setDoc, arrayUnion } from 'firebase/firestore';
 import { auth, db } from './firebase';
-import { Project, User, Epic, UserStory, TeamMember, Impediment, Risk, DailyStandup } from './types';
+import { Project, User, Epic, UserStory, TeamMember, Impediment, Risk, DailyStandup, ObeyaChecklist, SprintData } from './types';
 import { Layout } from './components/Layout';
 import { aiService } from './services/aiService';
 import { 
@@ -11,7 +12,15 @@ import {
   LineChart, Line, Legend, AreaChart, Area, ReferenceLine, ComposedChart
 } from 'recharts';
 
-// --- Components for specific pages/phases ---
+// --- Helpers ---
+const ContextHeader = ({ title, content }: { title: string, content: string | React.ReactNode }) => (
+    <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 text-sm text-gray-600">
+        <strong className="text-gray-800 uppercase text-xs tracking-wider block mb-1">{title}</strong>
+        <div className="line-clamp-3">{content || <span className="italic text-gray-400">Not defined yet.</span>}</div>
+    </div>
+);
+
+// --- Landing & Auth Components (Kept as requested) ---
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -59,9 +68,6 @@ const LandingPage = () => {
           >
             {user ? 'VAI ALLA DASHBOARD' : 'INIZIA ORA'}
           </button>
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-gray-600">
-            Scopri il metodo ↓
-          </span>
         </div>
       </section>
 
@@ -74,94 +80,23 @@ const LandingPage = () => {
               <h2 className="text-5xl md:text-6xl font-bold leading-tight">
                 Rendere l'eccellenza strategica <span className="text-[#FF9B5A]">semplice</span>, umana e immediata.
               </h2>
-              <div className="mt-8 relative">
-                 <p className="text-gray-400 text-lg leading-relaxed relative z-10">
-                   Trasformiamo la complessità in risultati pratici stando <span className="text-white border-b-2 border-[#FF5A6E]">"nel fango"</span> con i leader, parlando un linguaggio diretto e usando un approccio empatico.
-                 </p>
-              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Card 1 */}
               <div className="bg-[#383D4B] p-8 rounded-3xl hover:bg-[#404656] transition border border-gray-700">
                 <div className="text-2xl mb-4">🤝</div>
                 <h3 className="font-bold text-sm tracking-widest uppercase mb-2">Empatia Operativa</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">Sentiamo le sfide del team sulla nostra pelle.</p>
               </div>
-               {/* Card 2 */}
                <div className="bg-[#383D4B] p-8 rounded-3xl hover:bg-[#404656] transition border border-gray-700">
                 <div className="text-2xl mb-4">⚡</div>
                 <h3 className="font-bold text-sm tracking-widest uppercase mb-2">Semplicità Radicale</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">Tagliamo il superfluo per arrivare al valore.</p>
-              </div>
-               {/* Card 3 */}
-               <div className="bg-[#383D4B] p-8 rounded-3xl hover:bg-[#404656] transition border border-gray-700">
-                <div className="text-2xl mb-4">🛠️</div>
-                <h3 className="font-bold text-sm tracking-widest uppercase mb-2">Toolbox Infinita</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">Non solo martelli, ma un intero arsenale agile.</p>
-              </div>
-               {/* Card 4 */}
-               <div className="bg-[#383D4B] p-8 rounded-3xl hover:bg-[#404656] transition border border-gray-700">
-                <div className="text-2xl mb-4">⭕</div>
-                <h3 className="font-bold text-sm tracking-widest uppercase mb-2">Zero Ego</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">Il risultato del progetto viene prima di noi.</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Steps Section */}
-      <section className="py-24 px-6 bg-[#F3F4F6]">
-         <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16">
-               <span className="text-gray-400 text-xs font-bold tracking-[0.2em] uppercase border-b-2 border-[#FF5A6E] pb-2">Il Percorso Formativo</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-               {/* Step 1 */}
-               <div className="bg-white p-10 rounded-[2.5rem] shadow-sm hover:shadow-xl transition duration-300">
-                  <span className="text-6xl font-black text-gray-100 mb-6 block">01</span>
-                  <h3 className="text-2xl font-bold text-[#2E3340] mb-2">COMUNE:</h3>
-                  <h3 className="text-2xl font-bold text-[#2E3340] mb-6">FONDAMENTA</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed mb-8">
-                     Giorno 1 & 2: Abbattimento silos, cultura Fail-Safe e la grande simulazione LEGO Scrum per testare il flusso.
-                  </p>
-                  <span className="text-[#FF5A6E] text-[10px] font-bold tracking-widest uppercase">Mindset & Esecuzione</span>
-               </div>
-
-               {/* Step 2 */}
-               <div className="bg-white p-10 rounded-[2.5rem] shadow-sm hover:shadow-xl transition duration-300 transform md:-translate-y-4">
-                  <span className="text-6xl font-black text-gray-100 mb-6 block">02</span>
-                  <h3 className="text-2xl font-bold text-[#2E3340] mb-6">SCRUM MASTER</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed mb-8">
-                     Giorno 3: Servant Leadership, facilitazione avanzata e analisi delle metriche per abilitare l'autonomia del team.
-                  </p>
-                  <span className="text-green-500 text-[10px] font-bold tracking-widest uppercase">Coaching & Facilitazione</span>
-               </div>
-
-               {/* Step 3 */}
-               <div className="bg-white p-10 rounded-[2.5rem] shadow-sm hover:shadow-xl transition duration-300">
-                  <span className="text-6xl font-black text-[#FF9B5A]/20 mb-6 block">03</span>
-                  <h3 className="text-2xl font-bold text-[#2E3340] mb-6">PRODUCT OWNER</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed mb-8">
-                     Giorno 4: Massimizzazione del valore, prioritizzazione strategica e Workshop finale sul caso reale SACMI.
-                  </p>
-                  <span className="text-[#FF9B5A] text-[10px] font-bold tracking-widest uppercase">Visione & Business</span>
-               </div>
-            </div>
-         </div>
-      </section>
-
-      {/* Footer */}
       <footer className="py-12 bg-white text-center">
-         <div className="flex justify-center gap-1 mb-4">
-            <div className="w-2 h-2 rounded-full bg-[#FF5A6E]"></div>
-            <div className="w-2 h-2 rounded-full bg-[#FF9B5A]"></div>
-            <div className="w-2 h-2 rounded-full bg-[#2E3340]"></div>
-         </div>
-         <h4 className="text-lg tracking-[0.3em] font-medium text-gray-800 mb-2">METÀ HODÒS</h4>
-         <p className="text-[0.6rem] tracking-[0.2em] text-gray-400 uppercase mb-8">Persone • Agilità • Risultati</p>
          <p className="text-xs text-gray-400">© 2025 Meta Hodos. All rights reserved.</p>
       </footer>
     </div>
@@ -206,22 +141,11 @@ const Login = () => {
             {isRegistering ? 'Sign Up' : 'Login'}
           </button>
         </form>
-        
         <div className="mt-4 text-center">
-            <button 
-                type="button" 
-                onClick={() => setIsRegistering(!isRegistering)}
-                className="text-sm text-gray-500 hover:text-accent font-medium underline"
-            >
+            <button type="button" onClick={() => setIsRegistering(!isRegistering)} className="text-sm text-gray-500 hover:text-accent font-medium underline">
                 {isRegistering ? "Already have an account? Login" : "No account? Create one"}
             </button>
         </div>
-
-        {!isRegistering && (
-            <div className="mt-4 text-xs text-gray-400 text-center">
-            Use admin credentials provided in documentation or create a new account.
-            </div>
-        )}
       </div>
     </div>
   );
@@ -230,7 +154,7 @@ const Login = () => {
 const ProjectList = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [newProjectName, setNewProjectName] = useState('');
-  const [language, setLanguage] = useState<'it' | 'en'>('it'); // Default IT as requested
+  const [language, setLanguage] = useState<'it' | 'en'>('it');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -265,24 +189,12 @@ const ProjectList = () => {
         <div className="flex justify-between items-center mb-10">
           <h1 className="text-4xl font-extrabold text-sidebar">YOUR PROJECTS</h1>
           <div className="flex gap-2 items-center">
-             <select 
-                value={language} 
-                onChange={(e) => setLanguage(e.target.value as 'it' | 'en')}
-                className="border border-gray-300 rounded-lg p-2 bg-white text-gray-800 font-bold"
-             >
+             <select value={language} onChange={(e) => setLanguage(e.target.value as 'it' | 'en')} className="border border-gray-300 rounded-lg p-2 bg-white text-gray-800 font-bold">
                 <option value="it">🇮🇹 ITA</option>
                 <option value="en">🇬🇧 ENG</option>
              </select>
-            <input 
-              type="text" 
-              placeholder="New Project Name" 
-              className="border border-gray-300 rounded-lg p-2 text-gray-900 bg-white"
-              value={newProjectName}
-              onChange={e => setNewProjectName(e.target.value)}
-            />
-            <button onClick={createProject} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold">
-              + Create
-            </button>
+            <input type="text" placeholder="New Project Name" className="border border-gray-300 rounded-lg p-2 text-gray-900 bg-white" value={newProjectName} onChange={e => setNewProjectName(e.target.value)}/>
+            <button onClick={createProject} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold">+ Create</button>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -291,10 +203,7 @@ const ProjectList = () => {
               <h3 className="text-xl font-bold text-gray-800 mb-2">{p.name}</h3>
               <div className="flex justify-between items-center mt-4">
                 <span className="text-sm text-gray-500">{new Date(p.createdAt).toLocaleDateString()}</span>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs">{p.language === 'it' ? '🇮🇹' : '🇬🇧'}</span>
-                    <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-xs font-bold uppercase">{p.status}</span>
-                </div>
+                <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-xs font-bold uppercase">{p.status}</span>
               </div>
             </div>
           ))}
@@ -304,7 +213,7 @@ const ProjectList = () => {
   );
 };
 
-// --- Phases Components (1-8 & Sprint) ---
+// --- Phases Components ---
 
 const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
   const [accepted, setAccepted] = useState(project.phases.mindset?.completed || false);
@@ -341,20 +250,10 @@ const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: an
                   <div className="bg-gray-200 p-8 rounded-2xl opacity-70 grayscale transition hover:grayscale-0 hover:opacity-100">
                       <h3 className="text-xl font-bold text-gray-600 mb-4">🏭 Traditional (Waterfall)</h3>
                       <p className="text-sm text-gray-500 mb-4">Fixed scope, fixed timeline, command & control.</p>
-                      <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
-                          <li>Detailed upfront planning</li>
-                          <li>Strict phase gates</li>
-                          <li>Value delivered only at the end</li>
-                      </ul>
                   </div>
-                  <div className="bg-white p-8 rounded-2xl shadow-lg border-2 border-accent/20 transform hover:scale-105 transition duration-300">
+                  <div className="bg-white p-8 rounded-2xl shadow-lg border-2 border-accent/20">
                       <h3 className="text-xl font-bold text-accent mb-4">🚀 Agile Mindset</h3>
                       <p className="text-sm text-gray-600 mb-4">Iterative, incremental, empirical. Embrace change.</p>
-                      <ul className="list-disc pl-5 space-y-2 text-gray-700 text-sm">
-                          <li><strong className="text-sidebar">Empiricism:</strong> Transparency, Inspection, Adaptation.</li>
-                          <li>Working software over docs.</li>
-                          <li>Responding to change.</li>
-                      </ul>
                   </div>
               </div>
               <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm justify-end">
@@ -367,16 +266,9 @@ const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: an
             </div>
           )}
           {tab === 'scrum' && (
-              <div className="space-y-6">
-                  <div className="relative bg-white rounded-2xl shadow-sm p-8 overflow-hidden">
-                      <div className="absolute top-0 left-0 w-2 h-full bg-accent"></div>
-                      <h3 className="text-2xl font-extrabold text-sidebar mb-6">The Scrum Framework</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                          <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100"><div className="text-2xl mb-2">👑</div><h4 className="font-bold text-indigo-900">Product Owner</h4></div>
-                          <div className="bg-pink-50 p-4 rounded-xl border border-pink-100"><div className="text-2xl mb-2">🛡️</div><h4 className="font-bold text-pink-900">Scrum Master</h4></div>
-                          <div className="bg-green-50 p-4 rounded-xl border border-green-100"><div className="text-2xl mb-2">🛠️</div><h4 className="font-bold text-green-900">Developers</h4></div>
-                      </div>
-                  </div>
+              <div className="p-8 bg-white rounded-2xl shadow-sm">
+                  <h3 className="text-2xl font-extrabold text-sidebar mb-6">The Scrum Framework</h3>
+                  <p className="text-gray-600">Roles, Events, Artifacts explained.</p>
               </div>
           )}
           {tab === 'coach' && (
@@ -417,8 +309,11 @@ const PhaseVision = ({ project, onSave }: { project: Project, onSave: (data: any
       <h2 className="text-3xl font-extrabold text-sidebar">2. PRODUCT VISION</h2>
       <div className="grid grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+          <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Product Name" value={inputs.name} onChange={e => setInputs({...inputs, name: e.target.value})} />
           <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Target Audience" value={inputs.target} onChange={e => setInputs({...inputs, target: e.target.value})} />
           <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Problem to Solve" value={inputs.problem} onChange={e => setInputs({...inputs, problem: e.target.value})} />
+          <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Current Solution" value={inputs.currentSolution} onChange={e => setInputs({...inputs, currentSolution: e.target.value})} />
+           <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Differentiation" value={inputs.differentiation} onChange={e => setInputs({...inputs, differentiation: e.target.value})} />
           <button onClick={handleGenerate} disabled={loading} className="w-full bg-sidebar text-white py-3 rounded-xl font-bold">{loading ? 'Generating...' : '✨ Generate Vision'}</button>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
@@ -443,8 +338,10 @@ const PhaseObjectives = ({ project, onSave }: { project: Project, onSave: (data:
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-extrabold text-sidebar">3. STRATEGIC OBJECTIVES</h2>
+      <ContextHeader title="Product Vision Reference" content={<div dangerouslySetInnerHTML={{ __html: project.phases.vision?.text || '' }} />} />
       <div className="grid grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+            <label className="block text-sm font-bold text-gray-700">Project Deadline</label>
             <input type="date" className="w-full border p-3 rounded-xl text-gray-800 bg-white" value={deadline} onChange={e => setDeadline(e.target.value)} />
             <button onClick={handleGenerate} disabled={loading || !deadline} className="w-full bg-sidebar text-white py-3 rounded-xl font-bold disabled:opacity-50">{loading ? 'Generating...' : '✨ Generate Objectives'}</button>
         </div>
@@ -468,7 +365,9 @@ const PhaseKPIs = ({ project, onSave }: { project: Project, onSave: (data: any) 
     };
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center"><h2 className="text-3xl font-extrabold text-sidebar">4. KEY PERFORMANCE INDICATORS</h2><button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">{loading ? 'Generating...' : '✨ Generate KPIs'}</button></div>
+            <h2 className="text-3xl font-extrabold text-sidebar">4. KEY PERFORMANCE INDICATORS</h2>
+            <ContextHeader title="Strategic Objectives Reference" content={<div dangerouslySetInnerHTML={{ __html: project.phases.objectives?.text || '' }} />} />
+            <div className="flex justify-end"><button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">{loading ? 'Generating...' : '✨ Generate KPIs'}</button></div>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"><table className="w-full"><thead className="bg-gray-50 border-b border-gray-200"><tr><th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">KPI Name</th><th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Target</th><th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Metric</th></tr></thead><tbody className="divide-y divide-gray-100">{kpis.map((kpi, i) => (<tr key={i}><td className="px-6 py-4 text-gray-800">{kpi.kpi}</td><td className="px-6 py-4 text-gray-600">{kpi.target}</td><td className="px-6 py-4 text-gray-600">{kpi.metric}</td></tr>))}</tbody></table></div>
             {kpis.length > 0 && <button onClick={() => onSave({ table: kpis })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save KPIs</button>}
         </div>
@@ -490,6 +389,7 @@ const PhaseBacklog = ({ project, onSave }: { project: Project, onSave: (data: an
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center"><h2 className="text-3xl font-extrabold text-sidebar">5. PRODUCT BACKLOG</h2><button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">{loading ? 'Generating...' : '✨ Generate Backlog'}</button></div>
+      <ContextHeader title="KPIs & Objectives Reference" content={project.phases.kpis?.table?.map(k => `${k.kpi}: ${k.target}`).join(', ')} />
       <div className="space-y-4">{epics.map((epic, i) => (<div key={epic.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"><div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center"><span className="font-bold text-lg text-sidebar">{epic.title}</span><span className="text-xs font-bold text-gray-400 bg-white px-2 py-1 rounded border">{epic.stories.length} Stories</span></div><div className="divide-y divide-gray-100">{epic.stories.map((story) => (<div key={story.id} className="p-6 hover:bg-gray-50 transition"><div className="flex justify-between items-start mb-2"><span className="font-bold text-gray-800">{story.title}</span><span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded shrink-0">SP: {story.storyPoints}</span></div><p className="text-sm text-gray-600 mb-3">{story.description}</p></div>))}</div></div>))}</div>
       {epics.length > 0 && <button onClick={() => onSave({ epics })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90">Save Backlog</button>}
     </div>
@@ -498,24 +398,148 @@ const PhaseBacklog = ({ project, onSave }: { project: Project, onSave: (data: an
 
 const PhaseTeam = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     const [members, setMembers] = useState<TeamMember[]>(project.phases.team?.members || []);
+    const [newMember, setNewMember] = useState({ name: '', email: '', role: '', skills: '' });
     const [loading, setLoading] = useState(false);
+
     const handleGenerate = async () => {
         setLoading(true);
         try {
             const result = await aiService.generateTeamRecommendations(project.phases.vision?.text || '');
-            const newMembers = result.map((r: any, i: number) => ({ id: `member-${Date.now()}-${i}`, name: `Candidate ${i+1}`, role: r.role, skills: r.skills }));
-            setMembers([...members, ...newMembers]);
+            const newMembers = result.map((r: any, i: number) => ({ id: `member-${Date.now()}-${i}`, name: `Candidate ${i+1}`, email: 'placeholder@email.com', role: r.role, skills: r.skills }));
+            setMembers(prev => [...prev, ...newMembers]);
         } catch (e) { alert("AI Error"); }
         setLoading(false);
     };
+
+    const addMember = () => {
+        if (!newMember.name) return;
+        const member: TeamMember = {
+            id: `member-${Date.now()}`,
+            name: newMember.name,
+            email: newMember.email,
+            role: newMember.role,
+            skills: newMember.skills.split(',').map(s => s.trim())
+        };
+        setMembers([...members, member]);
+        setNewMember({ name: '', email: '', role: '', skills: '' });
+    };
+
+    const removeMember = (id: string) => {
+        setMembers(members.filter(m => m.id !== id));
+    };
+
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center"><h2 className="text-3xl font-extrabold text-sidebar">6. AGILE TEAM</h2><button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">{loading ? 'Analyzing...' : '✨ Suggest Roles'}</button></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{members.map(member => (<div key={member.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center"><div className="w-20 h-20 bg-gray-200 rounded-full mb-4 flex items-center justify-center text-2xl bg-sidebar text-white">{member.name[0]}</div><h3 className="font-bold text-gray-800">{member.name}</h3><p className="text-sm text-accent font-bold uppercase mb-2">{member.role}</p></div>))}</div>
-            <button onClick={() => onSave({ members })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Team</button>
+            <div className="flex justify-between items-center"><h2 className="text-3xl font-extrabold text-sidebar">6. AGILE TEAM</h2></div>
+            <ContextHeader title="Backlog Summary" content={`${project.phases.backlog?.epics?.length || 0} Epics, ${project.phases.backlog?.epics?.reduce((acc, e) => acc + e.stories.length, 0) || 0} User Stories defined.`} />
+            
+            {/* Manual ADD Form */}
+            <div className="bg-gray-100 p-6 rounded-2xl border border-gray-200">
+                <h4 className="font-bold text-gray-700 mb-4">Add Team Member</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <input className="p-2 rounded border" placeholder="Name" value={newMember.name} onChange={e => setNewMember({...newMember, name: e.target.value})} />
+                    <input className="p-2 rounded border" placeholder="Email" value={newMember.email} onChange={e => setNewMember({...newMember, email: e.target.value})} />
+                    <input className="p-2 rounded border" placeholder="Role (e.g. Developer)" value={newMember.role} onChange={e => setNewMember({...newMember, role: e.target.value})} />
+                    <input className="p-2 rounded border" placeholder="Skills (comma separated)" value={newMember.skills} onChange={e => setNewMember({...newMember, skills: e.target.value})} />
+                </div>
+                <div className="flex justify-between">
+                     <button onClick={addMember} className="bg-sidebar text-white px-4 py-2 rounded-lg font-bold">Add Member</button>
+                     <button onClick={handleGenerate} disabled={loading} className="text-accent text-sm font-bold underline">{loading ? 'Thinking...' : '✨ Suggest Roles with AI'}</button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{members.map(member => (
+                <div key={member.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center relative group">
+                    <button onClick={() => removeMember(member.id)} className="absolute top-2 right-2 text-red-400 hover:text-red-600 font-bold hidden group-hover:block">×</button>
+                    <div className="w-20 h-20 bg-gray-200 rounded-full mb-4 flex items-center justify-center text-2xl bg-sidebar text-white">{member.name[0]}</div>
+                    <h3 className="font-bold text-gray-800">{member.name}</h3>
+                    <p className="text-xs text-gray-500 mb-2">{member.email}</p>
+                    <p className="text-sm text-accent font-bold uppercase mb-2">{member.role}</p>
+                    <div className="flex flex-wrap gap-1 justify-center">{member.skills.map(s => <span key={s} className="text-[10px] bg-gray-100 px-2 py-1 rounded">{s}</span>)}</div>
+                </div>
+            ))}</div>
+            {members.length > 0 && <button onClick={() => onSave({ members })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Team</button>}
         </div>
     );
 };
+
+// --- PHASE 11: OBEYA ROOM (Moved before estimates in UI flow logic or accessed directly) ---
+const PhaseObeya = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+    const [checklist, setChecklist] = useState<ObeyaChecklist>(project.phases.obeya?.checklist || { visionBoard: false, roadmap: false, burndown: false, teamBoard: false, kpiDashboard: false, impediments: false });
+    const [image, setImage] = useState<string | null>(project.phases.obeya?.roomImageUrl || null);
+    const [layoutAnalysis, setLayoutAnalysis] = useState<any>(null);
+    const [loading, setLoading] = useState(false);
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImage(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const generateRendering = async () => {
+        if (!image) return alert("Upload an image first");
+        setLoading(true);
+        try {
+            // NOTE: Currently using text model to describe layout as image generation requires specific Imagen model setup not fully mocked here.
+            // In a full prod env, this would return a new image URL.
+            const result = await aiService.generateObeyaRendering(image.split(',')[1], checklist);
+            setLayoutAnalysis(result);
+            alert("AI Analysis Complete: See layout suggestions below.");
+        } catch(e) { console.error(e); alert("AI Error"); }
+        setLoading(false);
+    };
+
+    return (
+        <div className="space-y-6">
+             <h2 className="text-3xl font-extrabold text-sidebar">11. OBEYA ROOM SETUP</h2>
+             
+             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                 <h3 className="font-bold text-gray-700 mb-4">1. Checklist: Elements to Visualize</h3>
+                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                     {Object.keys(checklist).map(key => (
+                         <label key={key} className="flex items-center gap-2 cursor-pointer p-3 border rounded-xl hover:bg-gray-50">
+                             <input type="checkbox" checked={(checklist as any)[key]} onChange={e => setChecklist({...checklist, [key]: e.target.checked})} className="w-5 h-5 text-accent rounded focus:ring-accent" />
+                             <span className="capitalize text-sm font-medium">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                         </label>
+                     ))}
+                 </div>
+             </div>
+
+             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                 <h3 className="font-bold text-gray-700 mb-4">2. Room Layout</h3>
+                 {!image ? (
+                     <div className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center">
+                         <p className="text-gray-500 mb-4">Upload a photo of your physical room</p>
+                         <input type="file" accept="image/*" onChange={handleImageUpload} />
+                     </div>
+                 ) : (
+                     <div className="relative">
+                         <img src={image} alt="Room" className="rounded-xl w-full max-h-96 object-cover" />
+                         <button onClick={() => setImage(null)} className="absolute top-2 right-2 bg-white text-red-500 px-2 rounded shadow text-xs">Change</button>
+                     </div>
+                 )}
+                 
+                 <button onClick={generateRendering} disabled={loading || !image} className="mt-4 w-full bg-sidebar text-white py-3 rounded-xl font-bold">
+                     {loading ? 'AI analyzing room layout...' : '✨ Generate Rendering / AI Layout Suggestion'}
+                 </button>
+
+                 {layoutAnalysis && (
+                     <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                         <h4 className="font-bold text-yellow-800 mb-2">AI Layout Suggestion:</h4>
+                         <p className="text-sm text-yellow-900">{layoutAnalysis.layoutDescription || JSON.stringify(layoutAnalysis)}</p>
+                     </div>
+                 )}
+             </div>
+
+             <button onClick={() => onSave({ checklist, roomImageUrl: image })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Obeya Setup</button>
+        </div>
+    )
+}
 
 const PhaseEstimates = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
   const [loading, setLoading] = useState(false);
@@ -544,6 +568,17 @@ const PhaseEstimates = ({ project, onSave }: { project: Project, onSave: (data: 
   return (
       <div className="space-y-6">
           <div className="flex justify-between items-center"><h2 className="text-3xl font-extrabold text-sidebar">7. ESTIMATIONS</h2><div className="text-right"><p className="text-2xl font-bold text-accent">{totalPoints} SP</p><p className="text-xs text-gray-500 font-bold uppercase">Total Hours: {totalHours}h</p></div></div>
+          <ContextHeader title="Backlog to Estimate" content={`${allStories.length} User Stories loaded.`} />
+          
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 max-h-96 overflow-y-auto mb-4">
+             {allStories.map(s => (
+                 <div key={s.id} className="p-4 border-b flex justify-between">
+                     <span className="text-sm font-medium">{s.title}</span>
+                     <span className="text-xs bg-gray-100 px-2 py-1 rounded">{s.storyPoints > 0 ? `${s.storyPoints} SP` : 'Not est.'}</span>
+                 </div>
+             ))}
+          </div>
+
           <div className="flex gap-4"><button onClick={handleEstimate} disabled={loading} className="flex-1 bg-sidebar text-white py-4 rounded-xl font-bold">{loading ? 'AI Estimating...' : '✨ Generate Estimations'}</button><button onClick={saveEstimates} className="flex-1 bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Estimates</button></div>
       </div>
   )
@@ -551,956 +586,352 @@ const PhaseEstimates = ({ project, onSave }: { project: Project, onSave: (data: 
 
 const PhaseRoadmap = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     const [roadmap, setRoadmap] = useState<any[]>(project.phases.roadmap?.items || []);
+    const [mvpDesc, setMvpDesc] = useState(project.phases.roadmap?.mvpDescription || '');
+    const [sprintDuration, setSprintDuration] = useState(project.phases.roadmap?.sprintDuration || 2);
+    const [availability, setAvailability] = useState<Record<string, number>>(project.phases.roadmap?.memberAvailability || {});
     const [loading, setLoading] = useState(false);
+    
+    const teamMembers = project.phases.team?.members || [];
+
     const handleGenerate = async () => {
         setLoading(true);
         try {
             const epics = project.phases.backlog?.epics || [];
             if(epics.length === 0) { alert("Backlog empty."); return; }
-            const result = await aiService.generateRoadmap(project.phases.vision?.text || '', epics);
+            // Now passing MVP description, duration and availability to AI
+            const result = await aiService.generateRoadmap(project.phases.vision?.text || '', epics, mvpDesc, sprintDuration, availability);
             setRoadmap(result);
         } catch(e) { console.error(e); alert("AI Error"); }
         setLoading(false);
     };
+
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center"><h2 className="text-3xl font-extrabold text-sidebar">8. PRODUCT ROADMAP</h2><button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">{loading ? 'Planning...' : '✨ Generate Roadmap'}</button></div>
-            <div className="space-y-4">{roadmap.map((phase, idx) => (<div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-accent"><h3 className="text-xl font-bold text-gray-800">{phase.phase}</h3><p className="text-sm text-gray-500 font-medium">Duration: {phase.duration}</p></div>))}</div>
-            {roadmap.length > 0 && <button onClick={() => onSave({ items: roadmap })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Roadmap</button>}
+            <div className="flex justify-between items-center"><h2 className="text-3xl font-extrabold text-sidebar">8. PRODUCT ROADMAP</h2></div>
+            <ContextHeader title="Estimates Summary" content="Based on estimated Backlog from Phase 7." />
+
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+                <h3 className="font-bold text-gray-700">Roadmap Configuration</h3>
+                
+                <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">MVP Definition (What is crucial?)</label>
+                    <textarea 
+                        className="w-full border p-3 rounded-xl text-sm" 
+                        rows={3} 
+                        placeholder="Describe the minimum feature set..." 
+                        value={mvpDesc}
+                        onChange={e => setMvpDesc(e.target.value)}
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Sprint Duration</label>
+                    <div className="flex gap-4">
+                        {[1, 2, 4].map(w => (
+                            <label key={w} className="flex items-center gap-2 cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    name="sprintDuration" 
+                                    checked={sprintDuration === w} 
+                                    onChange={() => setSprintDuration(w)}
+                                    className="text-accent focus:ring-accent"
+                                />
+                                <span className="text-sm">{w} Week{w > 1 ? 's' : ''}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
+
+                <div>
+                     <label className="block text-sm font-bold text-gray-700 mb-2">Team Capacity (Hours/Sprint)</label>
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                         {teamMembers.map(m => (
+                             <div key={m.id}>
+                                 <span className="text-xs text-gray-500 block">{m.name}</span>
+                                 <input 
+                                    type="number" 
+                                    className="border p-2 rounded w-full text-sm" 
+                                    placeholder="Hours" 
+                                    value={availability[m.id] || ''}
+                                    onChange={e => setAvailability({...availability, [m.id]: parseInt(e.target.value) || 0})}
+                                 />
+                             </div>
+                         ))}
+                     </div>
+                </div>
+
+                <button onClick={handleGenerate} disabled={loading} className="w-full bg-sidebar text-white py-3 rounded-xl font-bold text-sm">
+                    {loading ? 'Planning...' : '✨ Generate Roadmap with Capacity Checks'}
+                </button>
+            </div>
+
+            <div className="space-y-4">{roadmap.map((phase, idx) => (<div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-accent"><h3 className="text-xl font-bold text-gray-800">{phase.phase}</h3><p className="text-sm text-gray-500 font-medium">Duration: {phase.duration}</p><p className="text-xs text-gray-400 mt-1">Focus: {phase.focus}</p></div>))}</div>
+            {roadmap.length > 0 && <button onClick={() => onSave({ items: roadmap, mvpDescription: mvpDesc, sprintDuration, memberAvailability: availability })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Roadmap</button>}
         </div>
     );
 };
 
 const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
-    // Tabs state - REFINEMENT MOVED FIRST
-    const [view, setView] = useState<'refinement' | 'planning' | 'board' | 'review' | 'retrospective'>('refinement');
-    // Local Epics state (for drag/drop and editing before save)
-    const [localEpics, setLocalEpics] = useState<Epic[]>(project.phases.backlog?.epics || []);
-    // Sprint Configuration
-    const [duration, setDuration] = useState<number>(project.phases.sprint?.durationWeeks || 2);
-    const [sprintGoal, setSprintGoal] = useState<string>(project.phases.sprint?.goal || '');
-    const [reviewNotes, setReviewNotes] = useState<string>(project.phases.sprint?.review || '');
-    const [retroNotes, setRetroNotes] = useState<string>(project.phases.sprint?.retrospective || '');
-    
-    // Capacity Planning State
-    const [memberCapacity, setMemberCapacity] = useState<Record<string, number>>(project.phases.sprint?.memberCapacity || {});
-    // Impediments State
-    const [impediments, setImpediments] = useState<Impediment[]>(project.phases.sprint?.impediments || []);
-    const [newImpediment, setNewImpediment] = useState('');
+  const [sprint, setSprint] = useState<SprintData>(project.phases.sprint || {
+    isActive: false,
+    number: 1,
+    startDate: '',
+    endDate: '',
+    durationWeeks: project.phases.roadmap?.sprintDuration || 2,
+    goal: '',
+    impediments: [],
+    dailyStandups: []
+  });
 
-    // Daily Standup Timer State
-    const [dailyDurationMinutes, setDailyDurationMinutes] = useState(project.phases.sprint?.dailyMeetingDuration || 15);
-    const [dailySeconds, setDailySeconds] = useState(dailyDurationMinutes * 60);
-    const [isDailyActive, setIsDailyActive] = useState(false);
-    const dailyIntervalRef = useRef<any>(null);
-    
-    // Modifiable Sprint Time
-    const [isEditingEndDate, setIsEditingEndDate] = useState(false);
-    const [newEndDate, setNewEndDate] = useState(project.phases.sprint?.endDate || '');
-    
-    const [aiLoading, setAiLoading] = useState(false);
+  const [selectedStoryIds, setSelectedStoryIds] = useState<string[]>(
+    (project.phases.backlog?.epics || [])
+      .flatMap(e => e.stories)
+      .filter(s => s.isInSprint)
+      .map(s => s.id)
+  );
 
-    // Team Members for assignment
-    const teamMembers = project.phases.team?.members || [];
-    
-    // Timer state
-    const [timeLeft, setTimeLeft] = useState<{days: number, hours: number}>({ days: 0, hours: 0 });
+  const [loading, setLoading] = useState(false);
+  const [newImpediment, setNewImpediment] = useState('');
 
-    useEffect(() => {
-        if (project.phases.sprint?.startDate && project.phases.sprint?.endDate && project.phases.sprint?.isActive) {
-            const calculateTime = () => {
-                const now = new Date().getTime();
-                const end = new Date(project.phases.sprint!.endDate).getTime();
-                const diff = end - now;
-                
-                if (diff > 0) {
-                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    setTimeLeft({ days, hours });
-                } else {
-                    setTimeLeft({ days: 0, hours: 0 });
-                }
-            };
-            calculateTime();
-            const interval = setInterval(calculateTime, 1000 * 60); // Update every minute
-            return () => clearInterval(interval);
-        }
-    }, [project.phases.sprint]);
+  // Helpers
+  const allStories = (project.phases.backlog?.epics || []).flatMap(e => e.stories);
+  const availableStories = allStories.filter(s => !s.isInSprint && s.status === 'todo');
+  const activeStories = allStories.filter(s => s.isInSprint);
 
-    // Daily Timer Effect
-    useEffect(() => {
-        if (isDailyActive) {
-            dailyIntervalRef.current = setInterval(() => {
-                setDailySeconds(prev => {
-                    if (prev <= 0) {
-                        setIsDailyActive(false);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        } else if (dailyIntervalRef.current) {
-            clearInterval(dailyIntervalRef.current);
-        }
-        return () => {
-            if (dailyIntervalRef.current) clearInterval(dailyIntervalRef.current);
-        };
-    }, [isDailyActive]);
+  const handleStartSprint = async () => {
+      if (selectedStoryIds.length === 0) return alert("Select stories first");
+      if (!sprint.goal) return alert("Define a Sprint Goal");
 
-    // Helpers
-    const getSprintStories = () => localEpics.flatMap(e => e.stories).filter(s => s.isInSprint);
-    const getBacklogStories = () => localEpics.flatMap(e => e.stories).filter(s => !s.isInSprint);
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(startDate.getDate() + (sprint.durationWeeks * 7));
 
-    // Calculations
-    const totalSprintSP = getSprintStories().reduce((acc, s) => acc + (s.storyPoints || 0), 0);
-    const totalSprintHours = getSprintStories().reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
-    const totalTeamCapacity = (Object.values(memberCapacity) as number[]).reduce((a, b) => a + b, 0);
-    const isOverloaded = totalTeamCapacity > 0 && totalSprintHours > totalTeamCapacity;
+      const newSprintData: SprintData = {
+          ...sprint,
+          isActive: true,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+      };
 
-    const toggleSprintStatus = (storyId: string) => {
-        setLocalEpics(prev => prev.map(epic => ({
-            ...epic,
-            stories: epic.stories.map(s => s.id === storyId ? { ...s, isInSprint: !s.isInSprint } : s)
-        })));
-    };
+      const updatedEpics = (project.phases.backlog?.epics || []).map(epic => ({
+          ...epic,
+          stories: epic.stories.map(s => selectedStoryIds.includes(s.id) ? { ...s, isInSprint: true, status: 'todo' } : s)
+      }));
 
-    const updateStoryStatus = (storyId: string, status: 'todo' | 'doing' | 'done') => {
-        setLocalEpics(prev => prev.map(epic => ({
-            ...epic,
-            stories: epic.stories.map(s => {
-                if (s.id !== storyId) return s;
-                
-                const updatedStory = { ...s, status };
-                
-                if (status === 'done') {
-                    updatedStory.completedAt = Date.now();
-                } else {
-                    // Prevent saving undefined to Firestore which causes crashes
-                    delete updatedStory.completedAt;
-                }
-                
-                return updatedStory;
-            })
-        })));
-    };
+      try {
+          const projectRef = doc(db, 'projects', project.id);
+          await updateDoc(projectRef, {
+              "phases.backlog.epics": updatedEpics,
+              "phases.sprint": newSprintData
+          });
+          onSave(newSprintData); 
+      } catch(e: any) {
+          console.error(e);
+          alert("Error starting sprint: " + e.message);
+      }
+  };
 
-    const toggleAssignee = (storyId: string, memberId: string) => {
-        setLocalEpics(prev => prev.map(epic => ({
-            ...epic,
-            stories: epic.stories.map(s => {
-                if (s.id !== storyId) return s;
-                const currentAssignees = s.assigneeIds || [];
-                const newAssignees = currentAssignees.includes(memberId) 
-                    ? currentAssignees.filter(id => id !== memberId)
-                    : [...currentAssignees, memberId];
-                return { ...s, assigneeIds: newAssignees };
-            })
-        })));
-    };
+  const handleGenerateGoal = async () => {
+      setLoading(true);
+      const stories = allStories.filter(s => selectedStoryIds.includes(s.id));
+      try {
+          const goal = await aiService.generateSprintGoal(stories.map(s => s.title));
+          setSprint(prev => ({...prev, goal}));
+      } catch(e) { console.error(e); }
+      setLoading(false);
+  };
 
-    const handleCapacityChange = (memberId: string, hours: string) => {
-        setMemberCapacity(prev => ({
-            ...prev,
-            [memberId]: parseInt(hours) || 0
-        }));
-    };
+  const completeSprint = async () => {
+       const projectRef = doc(db, 'projects', project.id);
+       const completedSprintData: SprintData = {
+          ...sprint,
+          isActive: false,
+          number: sprint.number + 1,
+          dailyStandups: [],
+          impediments: [],
+          goal: '' // clear goal for next
+      };
+      
+      const updatedEpics = (project.phases.backlog?.epics || []).map(epic => ({
+          ...epic,
+          stories: epic.stories.map(s => {
+              if (s.isInSprint) {
+                  return { ...s, isInSprint: false, completedAt: s.status === 'done' ? Date.now() : undefined };
+              }
+              return s;
+          })
+      }));
 
-    // --- Impediments Logic ---
-    const addImpediment = () => {
-        if (!newImpediment) return;
-        const imp: Impediment = {
-            id: `imp-${Date.now()}`,
-            description: newImpediment,
-            memberId: auth.currentUser?.uid || 'unknown',
-            createdAt: Date.now(),
-            status: 'open'
-        };
-        setImpediments([...impediments, imp]);
-        setNewImpediment('');
-    }
+      await updateDoc(projectRef, { 
+          "phases.sprint": completedSprintData,
+          "phases.backlog.epics": updatedEpics
+      });
+      onSave(completedSprintData);
+      setSprint(completedSprintData);
+      setSelectedStoryIds([]);
+  };
 
-    const resolveImpediment = (id: string) => {
-        setImpediments(prev => prev.map(imp => imp.id === id ? { ...imp, status: 'resolved' } : imp));
-    }
+  if (sprint.isActive) {
+      return (
+          <div className="space-y-6">
+               <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-green-100">
+                   <div>
+                       <h2 className="text-2xl font-extrabold text-gray-800 flex items-center gap-3">
+                           SPRINT {sprint.number} 
+                           <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full animate-pulse">● ACTIVE</span>
+                       </h2>
+                       <p className="text-gray-500 mt-1">🎯 <strong>Goal:</strong> {sprint.goal}</p>
+                   </div>
+                   <div className="text-right">
+                       <p className="text-sm font-bold text-gray-400">Ends: {new Date(sprint.endDate).toLocaleDateString()}</p>
+                       <button onClick={completeSprint} className="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 px-4 py-2 rounded-xl font-bold text-sm mt-2">Complete Sprint</button>
+                   </div>
+               </div>
 
-    // --- Refinement Logic ---
-    const refineStory = async (storyId: string) => {
-        const story = getSprintStories().find(s => s.id === storyId) || getBacklogStories().find(s => s.id === storyId);
-        if(!story) return;
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[600px]">
+                   {['todo', 'doing', 'done'].map(status => (
+                       <div key={status} className="bg-gray-50 p-4 rounded-xl flex flex-col border border-gray-200">
+                           <h3 className="font-bold text-gray-500 uppercase text-xs mb-4 tracking-wider flex justify-between">
+                               {status}
+                               <span className="bg-gray-200 text-gray-600 px-2 rounded">{activeStories.filter(s => s.status === status).length}</span>
+                           </h3>
+                           <div className="space-y-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                               {activeStories.filter(s => s.status === status).map(story => (
+                                   <div key={story.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md hover:border-accent/30 transition group"
+                                        onClick={async () => {
+                                            const nextStatus = status === 'todo' ? 'doing' : status === 'doing' ? 'done' : 'todo';
+                                            const updatedEpics = (project.phases.backlog?.epics || []).map(e => ({
+                                                ...e,
+                                                stories: e.stories.map(s => s.id === story.id ? { ...s, status: nextStatus as any } : s)
+                                            }));
+                                            const projectRef = doc(db, 'projects', project.id);
+                                            await updateDoc(projectRef, { "phases.backlog.epics": updatedEpics });
+                                        }}
+                                   >
+                                       <p className="font-medium text-gray-800 text-sm mb-2">{story.title}</p>
+                                       <div className="flex justify-between items-center">
+                                           <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded font-mono">{story.storyPoints} SP</span>
+                                           <span className="text-xs text-gray-300 group-hover:text-accent">Click to move</span>
+                                       </div>
+                                   </div>
+                               ))}
+                           </div>
+                       </div>
+                   ))}
+               </div>
+               
+               <div className="bg-white p-6 rounded-2xl shadow-sm border border-red-100">
+                   <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">🚫 Impediments</h3>
+                   <div className="flex gap-2 mb-6">
+                       <input className="flex-1 border border-gray-200 bg-gray-50 p-3 rounded-xl text-sm outline-none focus:border-red-400" placeholder="Describe impediment..." value={newImpediment} onChange={e => setNewImpediment(e.target.value)} />
+                       <button onClick={async () => {
+                           if (!newImpediment) return;
+                           const imp: Impediment = { id: Date.now().toString(), description: newImpediment, memberId: auth.currentUser?.uid || '', createdAt: Date.now(), status: 'open' };
+                           const newImpediments = [...(sprint.impediments || []), imp];
+                           const projectRef = doc(db, 'projects', project.id);
+                           await updateDoc(projectRef, { "phases.sprint.impediments": newImpediments });
+                           setSprint(prev => ({...prev, impediments: newImpediments}));
+                           setNewImpediment('');
+                       }} className="bg-red-500 text-white px-6 rounded-xl font-bold hover:bg-red-600 transition">Add</button>
+                   </div>
+                   <div className="space-y-2">
+                       {sprint.impediments?.map(imp => (
+                           <div key={imp.id} className="flex justify-between items-center p-3 rounded-xl bg-red-50 border border-red-100">
+                               <span className="text-sm text-red-800 font-medium">{imp.description}</span>
+                               <span className="text-xs text-red-400">{new Date(imp.createdAt).toLocaleDateString()}</span>
+                           </div>
+                       ))}
+                       {(!sprint.impediments || sprint.impediments.length === 0) && <p className="text-sm text-gray-400 italic">No impediments reported.</p>}
+                   </div>
+               </div>
+          </div>
+      );
+  }
 
-        setAiLoading(true);
-        try {
-            const splitStories = await aiService.splitUserStory(story.title, story.description);
-            const newStories: UserStory[] = splitStories.map((s: any, idx: number) => ({
-                id: `split-${story.id}-${idx}`,
-                title: s.title,
-                description: s.description,
-                acceptanceCriteria: s.acceptanceCriteria,
-                // AI service now returns estimates, if available use them, otherwise default to 0
-                storyPoints: s.storyPoints || 0,
-                estimatedHours: s.estimatedHours || 0,
-                status: 'todo',
-                // IMPORTANT: Inherit sprint status so it appears on board if parent was there.
-                // DEFAULT TO FALSE IF UNDEFINED to avoid Firestore crashes.
-                isInSprint: story.isInSprint || false,
-                assigneeIds: story.assigneeIds || [] // Default to empty array to avoid undefined
-            }));
+  // Planning View
+  return (
+      <div className="space-y-6">
+          <div className="flex justify-between items-center">
+             <h2 className="text-3xl font-extrabold text-sidebar">9. SPRINT PLANNING</h2>
+             <span className="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-bold uppercase">Sprint {sprint.number} Setup</span>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-fit">
+                  <h3 className="font-bold text-gray-800 mb-6 flex items-center gap-2">
+                      <span>⚙️ Configuration</span>
+                  </h3>
+                  
+                  <div className="space-y-6">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Sprint Goal</label>
+                          <textarea 
+                              className="w-full border border-gray-200 bg-gray-50 p-3 rounded-xl text-sm focus:ring-2 focus:ring-accent/20 outline-none transition" 
+                              rows={4} 
+                              placeholder="Define a clear, inspiring goal for this sprint..."
+                              value={sprint.goal}
+                              onChange={e => setSprint({...sprint, goal: e.target.value})}
+                          />
+                          <button onClick={handleGenerateGoal} disabled={loading || selectedStoryIds.length === 0} className="mt-2 text-accent text-xs font-bold flex items-center gap-1 hover:underline disabled:opacity-50">
+                              {loading ? 'Thinking...' : '✨ Generate with AI'}
+                          </button>
+                      </div>
 
-            // Replace original story with new ones in the same epic
-            setLocalEpics(prev => prev.map(epic => ({
-                ...epic,
-                stories: epic.stories.flatMap(s => s.id === storyId ? newStories : s)
-            })));
-            alert(`Story refined! ${newStories.length} new stories created.`);
-        } catch(e) { console.error(e); alert("Failed to refine story."); }
-        setAiLoading(false);
-    }
+                      <div>
+                          <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Duration</label>
+                          <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-700 font-medium">
+                              {sprint.durationWeeks} Weeks
+                          </div>
+                      </div>
 
+                      <div className="pt-4 border-t border-gray-100">
+                          <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm text-gray-500">Selected Stories:</span>
+                              <span className="font-bold text-gray-800">{selectedStoryIds.length}</span>
+                          </div>
+                          <div className="flex justify-between items-center mb-6">
+                              <span className="text-sm text-gray-500">Total Points:</span>
+                              <span className="font-bold text-accent">
+                                  {allStories.filter(s => selectedStoryIds.includes(s.id)).reduce((acc, s) => acc + (s.storyPoints || 0), 0)} SP
+                              </span>
+                          </div>
+                          <button onClick={handleStartSprint} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg hover:bg-[#FF8A3A] transition transform hover:scale-[1.02]">START SPRINT 🚀</button>
+                      </div>
+                  </div>
+              </div>
 
-    const generateGoal = async () => {
-        const stories = getSprintStories();
-        if (stories.length === 0) {
-            alert("Select stories first");
-            return;
-        }
-        setAiLoading(true);
-        try {
-            const goal = await aiService.generateSprintGoal(stories.map(s => s.title));
-            setSprintGoal(goal);
-        } catch(e) { console.error(e); }
-        setAiLoading(false);
-    };
-
-    const startSprint = async () => {
-        if (!sprintGoal) { alert("Please set a Sprint Goal"); return; }
-        
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setDate(startDate.getDate() + (duration * 7));
-
-        const sprintData = {
-            isActive: true,
-            number: (project.phases.sprint?.number || 0) + 1,
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
-            durationWeeks: duration,
-            goal: sprintGoal,
-            memberCapacity,
-            moods: {},
-            impediments: [],
-            dailyMeetingDuration: dailyDurationMinutes,
-            dailyStandups: [], // Initialize empty
-            review: '',
-            retrospective: ''
-        };
-        
-        // Save to DB
-        const projectRef = doc(db, 'projects', project.id);
-        await updateDoc(projectRef, { 
-             "phases.backlog.epics": localEpics,
-             "phases.sprint": sprintData
-        });
-        alert(`Sprint ${sprintData.number} Started!`);
-        setView('board');
-    };
-
-    const completeSprint = async () => {
-        if (!confirm("Are you sure you want to complete the sprint? Unfinished stories will be moved to the backlog.")) return;
-
-        // Move incomplete stories back to backlog
-        const updatedEpics = localEpics.map(epic => ({
-            ...epic,
-            stories: epic.stories.map(s => {
-                if (s.isInSprint && s.status !== 'done') {
-                    return { ...s, isInSprint: false, status: 'todo' as const };
-                }
-                return s;
-            })
-        }));
-
-        // Archive Sprint (in a real app, we would push to a sprints collection)
-        const sprintData = {
-            ...project.phases.sprint,
-            isActive: false,
-            completedAt: new Date().toISOString()
-        };
-
-        const projectRef = doc(db, 'projects', project.id);
-        await updateDoc(projectRef, { 
-             "phases.backlog.epics": updatedEpics,
-             "phases.sprint": sprintData
-        });
-        setLocalEpics(updatedEpics);
-        alert("Sprint Completed! Incomplete stories moved to Backlog.");
-        setView('planning');
-    };
-
-    const saveChanges = async () => {
-         const projectRef = doc(db, 'projects', project.id);
-         // Guard against undefined values which crash Firestore
-         let updatedSprintData: any = { 
-             review: reviewNotes || "",
-             retrospective: retroNotes || "",
-             goal: sprintGoal || "",
-             memberCapacity: memberCapacity || {},
-             impediments: impediments || [],
-             dailyMeetingDuration: dailyDurationMinutes || 15
-         };
-
-         // If user edited the end date
-         if (newEndDate && new Date(newEndDate).getTime() !== new Date(project.phases.sprint?.endDate || '').getTime()) {
-             updatedSprintData.endDate = newEndDate;
-         }
-
-         // Update specific nested fields map
-         const updates: any = {
-             "phases.backlog.epics": localEpics
-         };
-         
-         // Dynamically add sprint fields to update map
-         Object.keys(updatedSprintData).forEach(key => {
-             updates[`phases.sprint.${key}`] = updatedSprintData[key];
-         });
-
-         await updateDoc(projectRef, updates);
-         setIsEditingEndDate(false);
-         alert("Sprint data saved!");
-    };
-
-    // --- Daily Standup Logic ---
-    const handleSaveDaily = async () => {
-        if (!project.phases.sprint?.isActive) return;
-
-        const stories = getSprintStories();
-        const totalHours = stories.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
-        const doneStories = stories.filter(s => s.status === 'done');
-        const doneHours = doneStories.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
-        const remainingHours = Math.max(0, totalHours - doneHours);
-
-        const currentStandups = project.phases.sprint.dailyStandups || [];
-        const dayNumber = currentStandups.length + 1;
-        
-        const newDaily: DailyStandup = {
-            day: dayNumber,
-            date: new Date().toISOString(),
-            oreCompletate: doneHours - (currentStandups.length > 0 ? (totalHours - currentStandups[currentStandups.length - 1].oreRimanenti) : 0), // Delta from last recorded state
-            oreRimanenti: remainingHours,
-            taskCompletati: doneStories.map(s => s.id)
-        };
-
-        const projectRef = doc(db, 'projects', project.id);
-        await updateDoc(projectRef, {
-            "phases.sprint.dailyStandups": arrayUnion(newDaily)
-        });
-        
-        alert(`Daily Standup Day ${dayNumber} Saved! Remaining: ${remainingHours}h`);
-    };
-
-    // --- Sub-components for Sprint ---
-
-    const DailyTimer = () => {
-        const formatTime = (secs: number) => {
-            const m = Math.floor(secs / 60);
-            const s = secs % 60;
-            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        };
-
-        return (
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
-                <h4 className="font-bold text-gray-500 uppercase text-xs mb-2">Daily Standup</h4>
-                <div className="text-4xl font-mono font-bold text-gray-800 mb-2">
-                    {formatTime(dailySeconds)}
-                </div>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={() => setIsDailyActive(!isDailyActive)}
-                        className={`px-3 py-1 rounded text-xs font-bold text-white ${isDailyActive ? 'bg-yellow-500' : 'bg-green-500'}`}
-                    >
-                        {isDailyActive ? 'Pause' : 'Start'}
-                    </button>
-                    <button 
-                        onClick={() => { setIsDailyActive(false); setDailySeconds(dailyDurationMinutes * 60); }}
-                        className="px-3 py-1 rounded text-xs font-bold bg-gray-200 text-gray-600"
-                    >
-                        Reset
-                    </button>
-                </div>
-                <div className="mt-2 flex items-center gap-1">
-                    <span className="text-[10px] text-gray-400">Duration:</span>
-                    <input 
-                        type="number" 
-                        className="w-10 text-[10px] border rounded text-center"
-                        value={dailyDurationMinutes}
-                        onChange={(e) => {
-                            const val = parseInt(e.target.value) || 15;
-                            setDailyDurationMinutes(val);
-                            setDailySeconds(val * 60);
-                        }}
-                    />
-                    <span className="text-[10px] text-gray-400">min</span>
-                </div>
-                
-                <button 
-                    onClick={handleSaveDaily}
-                    className="mt-4 w-full bg-accent text-white px-3 py-2 rounded font-bold text-xs shadow-md hover:bg-opacity-90"
-                >
-                    💾 End Daily & Save Progress
-                </button>
-            </div>
-        )
-    }
-
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (active && payload && payload.length) {
-            const actualData = payload.find((p: any) => p.dataKey === 'actual');
-            const idealData = payload.find((p: any) => p.dataKey === 'ideal');
-            
-            // If actual is null (future day), don't show specific diff
-            if (!actualData || actualData.value === null) {
-                 return (
-                    <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-xl text-xs">
-                        <p className="font-bold text-gray-700 mb-2">Day {label}</p>
-                        <p className="text-gray-400">Ideal: {idealData?.value?.toFixed(1)}h</p>
-                        <p className="text-gray-400 italic">Not yet reached</p>
-                    </div>
-                );
-            }
-
-            const diff = actualData.value - idealData.value;
-            const diffFormatted = diff ? Math.abs(diff).toFixed(1) : '0';
-
-            return (
-                <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-xl text-xs">
-                    <p className="font-bold text-gray-700 mb-2">Day {label}</p>
-                    <p className="text-[#EF4444] font-bold">Actual: {actualData.value}h</p>
-                    <p className="text-gray-400">Ideal: {idealData?.value?.toFixed(1)}h</p>
-                    {diff !== undefined && (
-                        <div className={`mt-2 pt-2 border-t font-bold ${diff > 0 ? 'text-red-500' : 'text-green-600'}`}>
-                            {diff > 0 ? `+${diffFormatted}h (Behind)` : `-${diffFormatted}h (Ahead)`}
-                        </div>
-                    )}
-                </div>
-            );
-        }
-        return null;
-    };
-
-    const BurndownChart = () => {
-        if (!project.phases.sprint?.startDate) return <div className="p-10 text-center text-gray-400">Start Sprint to view Burndown</div>;
-
-        const stories = getSprintStories();
-        const totalHours = stories.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
-        // Using provided duration in weeks to calculate days. Assuming 7 days a week for simplicity in chart x-axis.
-        const sprintDays = duration * 7;
-        
-        // --- Ideal Trend Construction (Full Sprint) ---
-        const idealData = Array.from({ length: sprintDays + 1 }, (_, day) => ({
-            day,
-            ideal: Math.max(0, totalHours - (totalHours / sprintDays * day))
-        }));
-
-        // --- Actual Remaining Construction (Historical + Today) ---
-        // Always start with Day 0 = Total Hours
-        const actualData: {day: number, actual: number}[] = [{ day: 0, actual: totalHours }];
-        
-        const standups = project.phases.sprint.dailyStandups || [];
-        
-        standups.forEach(daily => {
-            // Ensure we don't duplicate days if data is weird
-            if (!actualData.find(d => d.day === daily.day)) {
-                actualData.push({
-                    day: daily.day,
-                    actual: daily.oreRimanenti
-                });
-            }
-        });
-
-        // Merge for Chart
-        const chartData = idealData.map(item => {
-            const actualPoint = actualData.find(a => a.day === item.day);
-            return {
-                day: item.day,
-                ideal: item.ideal,
-                actual: actualPoint ? actualPoint.actual : null // null for future days ensures line stops
-            };
-        });
-
-        // Determine sprint status based on latest actual data point
-        const lastPoint = [...chartData].reverse().find(d => d.actual !== null);
-        let diff = 0;
-        let status = 'ontrack'; // ahead, behind, ontrack
-        if (lastPoint && lastPoint.ideal !== undefined) {
-            diff = lastPoint.actual! - lastPoint.ideal;
-            if (diff < -5) status = 'ahead';
-            else if (diff > 5) status = 'behind';
-        }
-
-        return (
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-96">
-                <div className="flex justify-between items-center mb-6">
-                    <h4 className="text-sm font-bold text-gray-500 uppercase">Sprint Burndown (Hours)</h4>
-                    {lastPoint && (
-                        <div className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-2 
-                            ${status === 'behind' ? 'bg-red-50 text-red-600 border-red-200' : 
-                              status === 'ahead' ? 'bg-green-50 text-green-700 border-green-200' : 
-                              'bg-yellow-50 text-yellow-700 border-yellow-200'}`}>
-                            {status === 'behind' && `⚠️ ${diff.toFixed(0)}h Behind`}
-                            {status === 'ahead' && `⚡ ${Math.abs(diff).toFixed(0)}h Ahead`}
-                            {status === 'ontrack' && `✓ On Track`}
-                        </div>
-                    )}
-                </div>
-                
-                <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                        <defs>
-                            <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#EF4444" stopOpacity={0.2}/>
-                                <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                        <XAxis 
-                            dataKey="day" 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{fontSize: 12, fill: '#6B7280'}} 
-                            label={{ value: 'Days', position: 'insideBottomRight', offset: -5, fontSize: 10, fill: '#9CA3AF' }}
-                            domain={[0, sprintDays]}
-                        />
-                        <YAxis 
-                            axisLine={false} 
-                            tickLine={false} 
-                            tick={{fontSize: 12, fill: '#6B7280'}} 
-                            label={{ value: 'Hours', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#9CA3AF' }}
-                            domain={[0, 'auto']}
-                        />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Legend iconType="circle" />
-                        
-                        {/* Ideal Trend - Gray Dashed (#9CA3AF) */}
-                        <Line 
-                            type="linear" 
-                            dataKey="ideal" 
-                            stroke="#9CA3AF" 
-                            strokeDasharray="5 5" 
-                            name="Ideal Trend" 
-                            dot={false} 
-                            strokeWidth={2}
-                            connectNulls={false}
-                        />
-                        
-                        {/* Actual Remaining - Red Solid (#EF4444) with Area */}
-                        <Area 
-                            type="monotone" 
-                            dataKey="actual" 
-                            stroke="#EF4444" 
-                            fill="url(#colorActual)" 
-                            name="Actual Remaining" 
-                            strokeWidth={3} 
-                            dot={{ fill: '#EF4444', r: 4, strokeWidth: 2, stroke: '#fff' }}
-                            connectNulls={false} // Don't connect if null (future)
-                        />
-                    </ComposedChart>
-                </ResponsiveContainer>
-            </div>
-        );
-    };
-
-    const ImpedimentsTracker = () => {
-        return (
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col flex-1 min-h-[200px]">
-                <h4 className="font-bold text-red-500 uppercase text-xs mb-3">Impediments</h4>
-                <div className="flex gap-2 mb-3">
-                    <input 
-                        className="w-full text-sm border rounded p-1" 
-                        placeholder="Add blocker..." 
-                        value={newImpediment} 
-                        onChange={e => setNewImpediment(e.target.value)}
-                    />
-                    <button onClick={addImpediment} className="bg-red-500 text-white px-3 rounded font-bold text-xs">+</button>
-                </div>
-                <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                    {impediments.filter(i => i.status === 'open').map(imp => (
-                        <div key={imp.id} className="bg-red-50 border border-red-100 p-2 rounded text-xs flex justify-between items-center">
-                            <span className="text-red-800">{imp.description}</span>
-                            <button onClick={() => resolveImpediment(imp.id)} className="text-green-600 font-bold hover:underline">Solve</button>
-                        </div>
-                    ))}
-                    {impediments.filter(i => i.status === 'open').length === 0 && <p className="text-xs text-gray-400">No active blocks.</p>}
-                </div>
-            </div>
-        )
-    }
-
-    const Column = ({ status, label, color }: any) => {
-        const stories = getSprintStories().filter(s => s.status === status);
-        return (
-            <div 
-                className="flex-1 bg-gray-100 rounded-xl p-4 flex flex-col overflow-hidden h-full"
-                onDragOver={e => e.preventDefault()}
-                onDrop={e => {
-                    const id = e.dataTransfer.getData("storyId");
-                    updateStoryStatus(id, status);
-                }}
-            >
-                <h3 className={`font-bold text-sm uppercase mb-4 text-${color}-600`}>{label} ({stories.length})</h3>
-                <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar pb-20">
-                    {stories.map(story => (
-                        <div 
-                            key={story.id} 
-                            draggable 
-                            onDragStart={e => e.dataTransfer.setData("storyId", story.id)}
-                            className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 cursor-move hover:shadow-md transition relative group"
-                        >
-                            <div className="flex justify-between items-start mb-2">
-                                <p className="font-bold text-gray-800 text-sm">{story.title}</p>
-                            </div>
-                            
-                            <div className="flex flex-wrap gap-2 mb-3">
-                                <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100 font-mono">
-                                    {story.storyPoints} SP
-                                </span>
-                                <span className="text-xs bg-gray-50 text-gray-600 px-2 py-0.5 rounded border border-gray-200 font-mono">
-                                    {story.estimatedHours}h
-                                </span>
-                            </div>
-
-                            <div className="flex justify-between items-center border-t border-gray-100 pt-2 mt-2">
-                                <div className="flex -space-x-2 overflow-hidden">
-                                    {story.assigneeIds && story.assigneeIds.length > 0 ? (
-                                        story.assigneeIds.map(uid => {
-                                            const member = teamMembers.find(m => m.id === uid);
-                                            return (
-                                                <div key={uid} className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-sidebar text-white flex items-center justify-center text-[10px] font-bold" title={member?.name}>
-                                                    {member?.name?.[0] || '?'}
-                                                </div>
-                                            )
-                                        })
-                                    ) : (
-                                        <span className="text-xs text-gray-400 italic">Unassigned</span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-6 h-full flex flex-col">
-             {/* Sprint Header */}
-             <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-shrink-0">
-                 <div>
-                    <h2 className="text-2xl font-extrabold text-sidebar">
-                        {project.phases.sprint?.isActive ? `SPRINT ${project.phases.sprint.number}` : 'SPRINT PLANNING'}
-                    </h2>
-                    {project.phases.sprint?.isActive && (
-                        <p className="text-xs text-gray-500 font-bold uppercase mt-1">Goal: {project.phases.sprint.goal}</p>
-                    )}
-                 </div>
-                 
-                 {project.phases.sprint?.isActive && (
-                     <div className="flex flex-col items-center bg-gray-900 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-800 transition" onClick={() => setIsEditingEndDate(true)} title="Click to Edit End Date">
-                         <span className="text-[10px] uppercase font-bold text-accent">Time Remaining</span>
-                         <span className="font-mono text-xl font-bold">{timeLeft.days}d {timeLeft.hours}h</span>
-                     </div>
-                 )}
-
-                 {isEditingEndDate && (
-                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                         <div className="bg-white p-6 rounded-xl shadow-xl">
-                             <h4 className="font-bold mb-4">Edit Sprint End Date</h4>
-                             <input 
-                                type="datetime-local" 
-                                className="border p-2 rounded mb-4"
-                                value={newEndDate ? newEndDate.slice(0, 16) : ''}
-                                onChange={e => setNewEndDate(e.target.value)}
-                             />
-                             <div className="flex gap-2">
-                                 <button onClick={saveChanges} className="bg-accent text-white px-4 py-2 rounded font-bold">Save New Date</button>
-                                 <button onClick={() => setIsEditingEndDate(false)} className="bg-gray-200 px-4 py-2 rounded font-bold">Cancel</button>
-                             </div>
-                         </div>
-                     </div>
-                 )}
-
-                 <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                     {['refinement', 'planning', 'board', 'review', 'retrospective'].map((t) => (
-                         <button 
-                            key={t}
-                            onClick={() => setView(t as any)} 
-                            className={`px-4 py-2 rounded-md font-bold text-sm capitalize transition-all ${view === t ? 'bg-white text-sidebar shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                         >
-                            {t}
-                         </button>
-                     ))}
-                 </div>
-                 <button onClick={saveChanges} className="bg-sidebar text-white px-4 py-2 rounded-lg font-bold text-sm">Save</button>
-             </div>
-             
-             {/* Content Area */}
-             <div className="flex-1 overflow-hidden">
-                 {view === 'planning' && (
-                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full overflow-y-auto pb-4">
-                         {/* Backlog Column */}
-                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col h-full min-h-[500px]">
-                             <h4 className="font-bold text-gray-500 uppercase text-xs mb-4">Product Backlog</h4>
-                             <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                                 {getBacklogStories().map(s => (
-                                     <div key={s.id} className="p-4 border rounded-xl hover:bg-gray-50 group relative transition bg-white">
-                                         <div className="flex justify-between items-start">
-                                             <span className="text-sm font-medium text-gray-800">{s.title}</span>
-                                             <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-mono">{s.storyPoints} SP</span>
-                                         </div>
-                                         <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
-                                             <button onClick={() => toggleSprintStatus(s.id)} className="text-xs bg-sidebar text-white px-3 py-1.5 rounded-lg font-bold">Add to Sprint →</button>
-                                         </div>
-                                     </div>
-                                 ))}
-                                 {getBacklogStories().length === 0 && <p className="text-sm text-gray-400 text-center py-10">Backlog empty.</p>}
-                             </div>
-                         </div>
-
-                         {/* Sprint Composition Column */}
-                         <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border-2 border-accent/20 flex flex-col h-full overflow-y-auto">
-                             {/* Capacity Planning Section */}
-                             <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                 <h4 className="font-bold text-gray-700 uppercase text-xs mb-3">Capacity Planning (Hours)</h4>
-                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                     {teamMembers.map(m => (
-                                         <div key={m.id}>
-                                             <label className="text-[10px] font-bold text-gray-500 block mb-1">{m.name}</label>
-                                             <input 
-                                                type="number"
-                                                className="w-full text-sm font-bold text-gray-800 p-2 border rounded bg-white"
-                                                placeholder="Hours"
-                                                value={memberCapacity[m.id] || 0}
-                                                onChange={e => handleCapacityChange(m.id, e.target.value)}
-                                             />
-                                         </div>
-                                     ))}
-                                 </div>
-                             </div>
-
-                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-                                 <h4 className="font-bold text-accent uppercase text-xs">Sprint Candidate</h4>
-                                 <div className="flex flex-wrap items-center gap-4">
-                                     <div className="flex items-center gap-2">
-                                         <span className="text-xs font-bold text-gray-600">Weeks:</span>
-                                         <select 
-                                            value={duration} 
-                                            onChange={e => setDuration(Number(e.target.value))}
-                                            className="bg-white border border-gray-200 rounded px-2 py-1 text-sm font-bold text-gray-800"
-                                         >
-                                             {[1, 2, 3, 4].map(w => <option key={w} value={w}>{w}</option>)}
-                                         </select>
-                                     </div>
-                                     <div className="flex gap-2">
-                                          <div className="text-xs font-bold bg-blue-50 text-blue-800 px-3 py-1 rounded-full border border-blue-100">
-                                             {totalSprintSP} SP
-                                         </div>
-                                         <div className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-2 ${isOverloaded ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-                                             {totalSprintHours} / {totalTeamCapacity} h
-                                             {isOverloaded && <span title="Over Capacity!">⚠️</span>}
-                                         </div>
-                                     </div>
-                                 </div>
-                             </div>
-
-                             {isOverloaded && (
-                                 <div className="mb-4 bg-red-50 text-red-800 p-3 rounded-lg text-sm border border-red-100 flex items-center gap-2">
-                                     <span>⚠️ Warning: Sprint load ({totalSprintHours}h) exceeds Team Capacity ({totalTeamCapacity}h). Consider removing stories.</span>
-                                 </div>
-                             )}
-
-                             <div className="flex gap-2 mb-4">
-                                <input 
-                                    placeholder="Enter Sprint Goal..."
-                                    className="flex-1 text-lg font-bold text-gray-800 border-none border-b-2 border-gray-100 focus:border-accent focus:ring-0 px-0 placeholder-gray-300 bg-transparent"
-                                    value={sprintGoal}
-                                    onChange={e => setSprintGoal(e.target.value)}
-                                />
-                                <button onClick={generateGoal} disabled={aiLoading} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold px-3 py-1 rounded">
-                                    {aiLoading ? '...' : '✨ AI Goal'}
-                                </button>
-                             </div>
-
-                             <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar mb-6 min-h-[200px]">
-                                 {getSprintStories().map(s => (
-                                     <div key={s.id} className="p-4 border border-accent/20 bg-accent/5 rounded-xl">
-                                         <div className="flex justify-between items-start mb-2">
-                                             <div>
-                                                 <span className="text-sm font-bold text-gray-800">{s.title}</span>
-                                                 <div className="flex gap-3 mt-1 text-xs text-gray-600">
-                                                     <span className="bg-white/50 px-1 rounded">{s.storyPoints} SP</span>
-                                                     <span className="bg-white/50 px-1 rounded">{s.estimatedHours}h</span>
-                                                 </div>
-                                             </div>
-                                             <button onClick={() => toggleSprintStatus(s.id)} className="text-gray-400 hover:text-red-500">×</button>
-                                         </div>
-                                         
-                                         {/* Assignees */}
-                                         <div className="mt-3 flex flex-wrap gap-2 items-center">
-                                             <span className="text-[10px] uppercase font-bold text-gray-500 mr-2">Assign to:</span>
-                                             {teamMembers.map(m => (
-                                                 <button 
-                                                    key={m.id}
-                                                    onClick={() => toggleAssignee(s.id, m.id)}
-                                                    className={`px-2 py-1 rounded-full text-[10px] font-bold border transition-colors ${
-                                                        s.assigneeIds?.includes(m.id) 
-                                                            ? 'bg-sidebar text-white border-sidebar' 
-                                                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
-                                                    }`}
-                                                 >
-                                                     {m.name}
-                                                 </button>
-                                             ))}
-                                         </div>
-                                     </div>
-                                 ))}
-                                 {getSprintStories().length === 0 && <p className="text-sm text-gray-400 text-center py-10">Select stories from the backlog.</p>}
-                             </div>
-
-                             <button 
-                                onClick={startSprint}
-                                disabled={getSprintStories().length === 0 || !sprintGoal}
-                                className="w-full bg-accent text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                             >
-                                 🚀 Start Sprint
-                             </button>
-                         </div>
-                     </div>
-                 )}
-
-                 {view === 'board' && (
-                     <div className="flex flex-col h-full gap-4 pb-2">
-                         <div className="flex-1 flex gap-4 min-w-0 overflow-x-auto h-1/2">
-                             <Column status="todo" label="To Do" color="gray" />
-                             <Column status="doing" label="Doing" color="blue" />
-                             <Column status="done" label="Done" color="green" />
-                             
-                             <div className="w-80 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
-                                <DailyTimer />
-                                <ImpedimentsTracker />
-                             </div>
-                         </div>
-                         {/* Inserted New Burndown Chart Here */}
-                         <BurndownChart />
-                     </div>
-                 )}
-                 
-                 {view === 'refinement' && (
-                     <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto pb-6">
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                             <div className="flex justify-between items-center mb-6">
-                                <div>
-                                    <h3 className="text-2xl font-bold text-sidebar mb-2">Backlog Refinement</h3>
-                                    <p className="text-gray-500">Select user stories from the sprint (or backlog) to split into smaller increments.</p>
-                                </div>
-                             </div>
-                             
-                             <div className="space-y-4">
-                                {localEpics.flatMap(e => e.stories).map(story => (
-                                    <div key={story.id} className={`border p-4 rounded-xl flex flex-col gap-4 hover:bg-gray-50 transition ${story.isInSprint ? 'border-l-4 border-l-accent' : ''}`}>
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    {story.isInSprint && <span className="text-[10px] bg-accent text-white px-2 py-0.5 rounded-full font-bold">IN SPRINT</span>}
-                                                    <p className="font-bold text-gray-800">{story.title}</p>
-                                                </div>
-                                                <p className="text-sm text-gray-500 line-clamp-1">{story.description}</p>
-                                                <div className="flex gap-2 mt-2">
-                                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">SP: {story.storyPoints}</span>
-                                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600">Hours: {story.estimatedHours}h</span>
-                                                </div>
-                                            </div>
-                                            <button 
-                                                onClick={() => refineStory(story.id)}
-                                                disabled={aiLoading}
-                                                className="bg-sidebar text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-opacity-90 disabled:opacity-50 whitespace-nowrap"
-                                            >
-                                                {aiLoading ? 'Splitting...' : '✂️ Split with AI'}
-                                            </button>
-                                        </div>
-                                        
-                                        {/* Action Bar for New Stories */}
-                                        <div className="flex gap-2 justify-end border-t pt-2 mt-2">
-                                            <button 
-                                                onClick={() => toggleSprintStatus(story.id)} 
-                                                className={`text-xs font-bold px-3 py-1 rounded border transition ${story.isInSprint ? 'text-red-500 border-red-200 hover:bg-red-50' : 'text-green-600 border-green-200 hover:bg-green-50'}`}
-                                            >
-                                                {story.isInSprint ? 'Remove from Sprint' : 'Add to Sprint'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                             </div>
-                        </div>
-                     </div>
-                 )}
-
-                 {view === 'review' && (
-                     <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto pb-6">
-                         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                             <h3 className="text-2xl font-bold text-sidebar mb-2">Sprint Review</h3>
-                             <p className="text-gray-500 mb-6">Demonstrate the hard work of the entire team to stakeholders.</p>
-                             
-                             <div className="space-y-4">
-                                 <label className="block text-sm font-bold text-gray-700">Meeting Notes & Feedback</label>
-                                 <textarea 
-                                    className="w-full h-96 p-4 border rounded-xl focus:ring-accent focus:border-accent text-gray-800 bg-gray-50"
-                                    placeholder="• Stakeholder feedback on feature X...&#10;• Proposed changes for next sprint...&#10;• Accepted stories..."
-                                    value={reviewNotes}
-                                    onChange={e => setReviewNotes(e.target.value)}
-                                 />
-                             </div>
-                         </div>
-                     </div>
-                 )}
-
-                 {view === 'retrospective' && (
-                     <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto pb-6">
-                         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                             <div className="flex justify-between items-center mb-6">
-                                <div>
-                                    <h3 className="text-2xl font-bold text-sidebar mb-2">Sprint Retrospective</h3>
-                                    <p className="text-gray-500">Inspect and adapt. How can we improve our process?</p>
-                                </div>
-                                <button onClick={completeSprint} className="bg-red-500 text-white px-6 py-2 rounded-xl font-bold shadow-lg hover:bg-red-600 transition">
-                                    🏁 Complete Sprint
-                                </button>
-                             </div>
-                             
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-96">
-                                 <div className="bg-green-50 p-4 rounded-xl border border-green-100 flex flex-col">
-                                     <h4 className="font-bold text-green-800 mb-2">What went well?</h4>
-                                     <textarea 
-                                        className="flex-1 bg-transparent border-none resize-none focus:ring-0 text-gray-700 text-sm"
-                                        placeholder="Type here..."
-                                        value={retroNotes.split('---')[0] || ''}
-                                        onChange={e => setRetroNotes(`${e.target.value}---${retroNotes.split('---')[1] || ''}`)}
-                                     />
-                                 </div>
-                                 <div className="bg-red-50 p-4 rounded-xl border border-red-100 flex flex-col">
-                                     <h4 className="font-bold text-red-800 mb-2">What can be improved?</h4>
-                                      <textarea 
-                                        className="flex-1 bg-transparent border-none resize-none focus:ring-0 text-gray-700 text-sm"
-                                        placeholder="Type here..."
-                                        value={retroNotes.split('---')[1] || ''}
-                                        onChange={e => setRetroNotes(`${retroNotes.split('---')[0] || ''}---${e.target.value}`)}
-                                     />
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                 )}
-             </div>
-        </div>
-    );
-}
+              <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-[600px]">
+                  <h3 className="font-bold text-gray-800 mb-4 flex justify-between items-center">
+                      <span>📋 Product Backlog</span>
+                      <span className="text-xs font-normal text-gray-400">Select stories for this sprint</span>
+                  </h3>
+                  <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                      {availableStories.length === 0 && <p className="text-gray-400 text-center py-10">No stories available in backlog.</p>}
+                      {availableStories.map(story => {
+                          const isSelected = selectedStoryIds.includes(story.id);
+                          return (
+                              <div 
+                                  key={story.id} 
+                                  onClick={() => {
+                                      if (isSelected) setSelectedStoryIds(ids => ids.filter(id => id !== story.id));
+                                      else setSelectedStoryIds(ids => [...ids, story.id]);
+                                  }}
+                                  className={`p-4 rounded-xl border cursor-pointer transition flex justify-between items-center ${isSelected ? 'border-accent bg-accent/5 ring-1 ring-accent' : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'}`}
+                              >
+                                  <div>
+                                      <h4 className={`font-bold text-sm mb-1 ${isSelected ? 'text-accent' : 'text-gray-700'}`}>{story.title}</h4>
+                                      <p className="text-xs text-gray-500 line-clamp-1">{story.description}</p>
+                                  </div>
+                                  <span className="text-xs font-bold bg-white border border-gray-200 px-2 py-1 rounded text-gray-600 whitespace-nowrap ml-4">{story.storyPoints} SP</span>
+                              </div>
+                          );
+                      })}
+                  </div>
+              </div>
+          </div>
+      </div>
+  );
+};
 
 const ProjectDetail = () => {
     const { projectId, phaseId } = useParams();
@@ -1539,11 +970,11 @@ const ProjectDetail = () => {
         case 'kpis': Component = PhaseKPIs; break;
         case 'backlog': Component = PhaseBacklog; break;
         case 'team': Component = PhaseTeam; break;
+        case 'obeya': Component = PhaseObeya; break; // Added Obeya
         case 'estimates': Component = PhaseEstimates; break;
         case 'roadmap': Component = PhaseRoadmap; break;
         case 'sprint': Component = PhaseSprint; break;
         case 'stats': Component = () => <div className="p-10 text-center text-gray-500">Statistics - Coming Soon</div>; break;
-        case 'obeya': Component = () => <div className="p-10 text-center text-gray-500">Obeya Room - Coming Soon</div>; break;
         default: Component = () => <div>Select a phase</div>;
     }
 
