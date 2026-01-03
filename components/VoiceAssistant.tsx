@@ -52,25 +52,14 @@ export const VoiceAssistant: React.FC = () => {
   const nextStartTimeRef = useRef<number>(0);
   const audioSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
 
-  // Helper to safely get key in Vite env
-  const getApiKey = () => {
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
-      // @ts-ignore
-      return import.meta.env.VITE_API_KEY || import.meta.env.API_KEY;
-    }
-    try { if (process.env.API_KEY) return process.env.API_KEY; } catch (e) {}
-    return '';
-  };
-
   const connect = async () => {
     try {
       setError(null);
       setStatus('connecting');
       setIsActive(true);
 
-      const apiKey = getApiKey();
-      if (!apiKey) throw new Error("API Key missing. Add VITE_API_KEY in Vercel settings.");
+      const apiKey = process.env.API_KEY;
+      if (!apiKey) throw new Error("API Key missing.");
 
       const ai = new GoogleGenAI({ apiKey });
       
