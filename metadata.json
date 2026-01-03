@@ -1,0 +1,7 @@
+{
+  "name": "ScrumAI Manager",
+  "description": "A comprehensive Agile Project Management tool powered by Gemini AI, guiding teams from Vision to Delivery.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

@@ -1,0 +1,1636 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { HashRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
+import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
+import { collection, query, where, getDocs, addDoc, doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
+import { Project, User, Epic, UserStory, TeamMember, Impediment } from './types';
+import { Layout } from './components/Layout';
+import { aiService } from './services/aiService';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  LineChart, Line, Legend, AreaChart, Area
+} from 'recharts';
+
+// --- Components for specific pages/phases ---
+
+const Login = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const navigate = useNavigate();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate('/projects');
+    } catch (error) {
+      alert("Login failed: " + (error as any).message);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center h-screen bg-sidebar">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
+        <h1 className="text-2xl font-extrabold text-sidebar mb-6 text-center">SCRUM AI MANAGER</h1>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-accent focus:border-accent text-gray-900 bg-white" required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Password</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-accent focus:border-accent text-gray-900 bg-white" required />
+          </div>
+          <button type="submit" className="w-full bg-accent text-white py-2 rounded-xl font-bold hover:bg-opacity-90 transition">Login</button>
+        </form>
+        <div className="mt-4 text-xs text-gray-400 text-center">
+          Use admin credentials provided in documentation.
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProjectList = () => {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [language, setLanguage] = useState<'it' | 'en'>('it'); // Default IT as requested
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!auth.currentUser) return;
+    const q = query(collection(db, "projects")); 
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const p = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Project));
+      setProjects(p);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const createProject = async () => {
+    if (!newProjectName) return;
+    const newProject: Omit<Project, 'id'> = {
+      name: newProjectName,
+      description: '',
+      language: language,
+      createdBy: auth.currentUser!.uid,
+      createdAt: Date.now(),
+      status: 'draft',
+      phases: {}
+    };
+    const docRef = await addDoc(collection(db, "projects"), newProject);
+    setNewProjectName('');
+    navigate(`/project/${docRef.id}/mindset`);
+  };
+
+  return (
+    <div className="min-h-screen bg-bg p-10">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-10">
+          <h1 className="text-4xl font-extrabold text-sidebar">YOUR PROJECTS</h1>
+          <div className="flex gap-2 items-center">
+             <select 
+                value={language} 
+                onChange={(e) => setLanguage(e.target.value as 'it' | 'en')}
+                className="border border-gray-300 rounded-lg p-2 bg-white text-gray-800 font-bold"
+             >
+                <option value="it">🇮🇹 ITA</option>
+                <option value="en">🇬🇧 ENG</option>
+             </select>
+            <input 
+              type="text" 
+              placeholder="New Project Name" 
+              className="border border-gray-300 rounded-lg p-2 text-gray-900 bg-white"
+              value={newProjectName}
+              onChange={e => setNewProjectName(e.target.value)}
+            />
+            <button onClick={createProject} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold">
+              + Create
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.map(p => (
+            <div key={p.id} onClick={() => navigate(`/project/${p.id}/mindset`)} className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md cursor-pointer border border-gray-100 transition">
+              <h3 className="text-xl font-bold text-gray-800 mb-2">{p.name}</h3>
+              <div className="flex justify-between items-center mt-4">
+                <span className="text-sm text-gray-500">{new Date(p.createdAt).toLocaleDateString()}</span>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs">{p.language === 'it' ? '🇮🇹' : '🇬🇧'}</span>
+                    <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-xs font-bold uppercase">{p.status}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Phases Components ---
+
+const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+  const [accepted, setAccepted] = useState(project.phases.mindset?.completed || false);
+  const [comment, setComment] = useState(project.phases.mindset?.comment || '');
+
+  return (
+    <div className="space-y-8 animate-fade-in">
+      <h2 className="text-3xl font-extrabold text-sidebar">1. AGILE MINDSET</h2>
+      <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex gap-8">
+           <div className="flex-1">
+             <h3 className="text-xl font-bold mb-4 text-gray-800">Traditional vs Agile</h3>
+             <p className="text-gray-600 mb-4">We are moving from a "Command & Control" structure to "Servant Leadership".</p>
+             <ul className="list-disc pl-5 space-y-2 text-gray-600">
+               <li>Individuals and interactions over processes and tools</li>
+               <li>Working software over comprehensive documentation</li>
+               <li>Customer collaboration over contract negotiation</li>
+               <li>Responding to change over following a plan</li>
+             </ul>
+           </div>
+           <div className="w-1/3 bg-blue-50 rounded-xl p-6 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-5xl mb-2">🔄</div>
+                <div className="font-bold text-sidebar">Scrum Cycle</div>
+              </div>
+           </div>
+        </div>
+      </div>
+      
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+         <textarea 
+            className="w-full border border-gray-200 rounded-xl p-4 h-32 focus:ring-accent focus:border-accent text-gray-800 bg-white"
+            placeholder="I understand the agile mindset because..."
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+         />
+         <div className="mt-4 flex items-center gap-4">
+           <label className="flex items-center gap-2 cursor-pointer">
+             <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} className="w-5 h-5 text-accent rounded focus:ring-accent" />
+             <span className="font-medium text-gray-700">I acknowledge and accept the Agile principles</span>
+           </label>
+           <button 
+             onClick={() => onSave({ completed: accepted, comment })}
+             disabled={!accepted}
+             className="ml-auto bg-accent text-white px-8 py-3 rounded-xl font-bold disabled:opacity-50 hover:bg-opacity-90"
+           >
+             Save & Continue
+           </button>
+         </div>
+      </div>
+    </div>
+  );
+};
+
+const PhaseVision = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+  const [inputs, setInputs] = useState(project.phases.vision?.inputs || { name: project.name, target: '', problem: '', currentSolution: '', differentiation: '' });
+  const [generatedVision, setGeneratedVision] = useState(project.phases.vision?.text || '');
+  const [loading, setLoading] = useState(false);
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      const text = await aiService.generateVision(inputs);
+      setGeneratedVision(text);
+    } catch (e) { alert("AI Error"); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-3xl font-extrabold text-sidebar">2. PRODUCT VISION</h2>
+      <div className="grid grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+          <h3 className="font-bold text-gray-700">Inputs</h3>
+          <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Target Audience" value={inputs.target} onChange={e => setInputs({...inputs, target: e.target.value})} />
+          <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Problem to Solve" value={inputs.problem} onChange={e => setInputs({...inputs, problem: e.target.value})} />
+          <input className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Current Solution" value={inputs.currentSolution} onChange={e => setInputs({...inputs, currentSolution: e.target.value})} />
+          <textarea className="w-full border p-3 rounded-xl text-gray-800 bg-white" placeholder="Differentiation" value={inputs.differentiation} onChange={e => setInputs({...inputs, differentiation: e.target.value})} />
+          <button onClick={handleGenerate} disabled={loading} className="w-full bg-sidebar text-white py-3 rounded-xl font-bold">
+            {loading ? 'Generating...' : '✨ Generate Vision with AI'}
+          </button>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+          <h3 className="font-bold text-gray-700 mb-2">Vision Statement (Editable)</h3>
+          {/* Changed to Textarea for easy editing */}
+          <textarea 
+            className="flex-1 border rounded-xl p-4 bg-gray-50 text-gray-800 min-h-[300px] font-sans" 
+            value={generatedVision} 
+            onChange={e => setGeneratedVision(e.target.value)} 
+          />
+          <button onClick={() => onSave({ inputs, text: generatedVision })} className="mt-4 bg-accent text-white py-3 rounded-xl font-bold">Save & Continue</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PhaseObjectives = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+  const [deadline, setDeadline] = useState(project.phases.objectives?.deadline || '');
+  const [generatedObjectives, setGeneratedObjectives] = useState(project.phases.objectives?.text || '');
+  const [loading, setLoading] = useState(false);
+
+  const handleGenerate = async () => {
+    if (!project.phases.vision?.text) {
+        alert("Please complete Product Vision first.");
+        return;
+    }
+    setLoading(true);
+    try {
+      const text = await aiService.generateObjectives(project.phases.vision.text, deadline);
+      setGeneratedObjectives(text);
+    } catch (e) { alert("AI Error"); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-3xl font-extrabold text-sidebar">3. STRATEGIC OBJECTIVES</h2>
+      <div className="grid grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+          <h3 className="font-bold text-gray-700">Settings</h3>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Target Date / Deadline</label>
+            <input 
+                type="date" 
+                className="w-full border p-3 rounded-xl text-gray-800 bg-white" 
+                value={deadline} 
+                onChange={e => setDeadline(e.target.value)} 
+            />
+          </div>
+          <div className="bg-gray-50 p-4 rounded-xl">
+             <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Based on Vision</h4>
+             <div className="text-sm text-gray-600 line-clamp-4" dangerouslySetInnerHTML={{__html: project.phases.vision?.text || 'No vision found.'}} />
+          </div>
+          <button onClick={handleGenerate} disabled={loading || !deadline} className="w-full bg-sidebar text-white py-3 rounded-xl font-bold disabled:opacity-50">
+            {loading ? 'Generating...' : '✨ Generate Objectives'}
+          </button>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+          <h3 className="font-bold text-gray-700 mb-2">SMART Objectives (Editable)</h3>
+          {/* Changed to Textarea for easy editing */}
+          <textarea 
+            className="flex-1 border rounded-xl p-4 bg-gray-50 text-gray-800 min-h-[300px] font-sans" 
+            value={generatedObjectives} 
+            onChange={e => setGeneratedObjectives(e.target.value)} 
+          />
+          <button onClick={() => onSave({ text: generatedObjectives, deadline })} className="mt-4 bg-accent text-white py-3 rounded-xl font-bold">Save & Continue</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PhaseKPIs = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+    const [kpis, setKpis] = useState<any[]>(project.phases.kpis?.table || []);
+    const [loading, setLoading] = useState(false);
+
+    const handleGenerate = async () => {
+        if (!project.phases.objectives?.text) {
+            alert("Please complete Objectives first.");
+            return;
+        }
+        setLoading(true);
+        try {
+            const result = await aiService.generateKPIs(project.phases.objectives.text);
+            setKpis(result);
+        } catch (e) { console.error(e); alert("AI Error"); }
+        setLoading(false);
+    };
+
+    const updateKpi = (index: number, field: string, value: string) => {
+        const newKpis = [...kpis];
+        newKpis[index][field] = value;
+        setKpis(newKpis);
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h2 className="text-3xl font-extrabold text-sidebar">4. KEY PERFORMANCE INDICATORS</h2>
+                <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
+                    {loading ? 'Generating...' : '✨ Generate KPIs'}
+                </button>
+            </div>
+            
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">KPI Name</th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Target</th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Metric</th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {kpis.length === 0 && (
+                            <tr>
+                                <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
+                                    No KPIs generated yet. Click the button above to generate based on your objectives.
+                                </td>
+                            </tr>
+                        )}
+                        {kpis.map((kpi, i) => (
+                            <tr key={i}>
+                                <td className="px-6 py-4">
+                                    <input className="w-full border-0 bg-transparent text-sm font-medium text-gray-900 focus:ring-0" value={kpi.kpi} onChange={e => updateKpi(i, 'kpi', e.target.value)} />
+                                </td>
+                                <td className="px-6 py-4">
+                                    <input className="w-full border-0 bg-transparent text-sm text-gray-600 focus:ring-0" value={kpi.target} onChange={e => updateKpi(i, 'target', e.target.value)} />
+                                </td>
+                                <td className="px-6 py-4">
+                                    <input className="w-full border-0 bg-transparent text-sm text-gray-600 focus:ring-0" value={kpi.metric} onChange={e => updateKpi(i, 'metric', e.target.value)} />
+                                </td>
+                                <td className="px-6 py-4">
+                                    <input className="w-full border-0 bg-transparent text-sm text-gray-600 focus:ring-0" value={kpi.frequency} onChange={e => updateKpi(i, 'frequency', e.target.value)} />
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+             {kpis.length > 0 && (
+                <button onClick={() => onSave({ table: kpis })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90">
+                    Save KPIs & Continue
+                </button>
+            )}
+        </div>
+    );
+}
+
+const PhaseBacklog = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+  const [epics, setEpics] = useState<Epic[]>(project.phases.backlog?.epics || []);
+  const [loading, setLoading] = useState(false);
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      const result = await aiService.generateBacklog(project.phases.vision?.text || '', project.phases.objectives?.text || '');
+      // Transform simple JSON to typed Epics
+      const newEpics = result.map((e: any, i: number) => ({
+        id: `epic-${Date.now()}-${i}`,
+        title: e.title,
+        stories: e.stories.map((s: any, j: number) => ({
+          id: `story-${Date.now()}-${i}-${j}`,
+          title: s.title,
+          description: s.description,
+          acceptanceCriteria: s.acceptanceCriteria,
+          storyPoints: 0,
+          estimatedHours: 0,
+          status: 'todo',
+          isInSprint: false,
+          assigneeIds: []
+        }))
+      }));
+      setEpics(newEpics);
+    } catch (e) { console.error(e); alert("AI Error"); }
+    setLoading(false);
+  };
+
+  const updateEpicTitle = (index: number, val: string) => {
+      const newEpics = [...epics];
+      newEpics[index].title = val;
+      setEpics(newEpics);
+  }
+
+  const updateStory = (epicIndex: number, storyIndex: number, field: string, val: any) => {
+      const newEpics = [...epics];
+      (newEpics[epicIndex].stories[storyIndex] as any)[field] = val;
+      setEpics(newEpics);
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-3xl font-extrabold text-sidebar">5. PRODUCT BACKLOG</h2>
+        <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
+          {loading ? 'Generating...' : '✨ Generate Backlog'}
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {epics.map((epic, i) => (
+          <div key={epic.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+             <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <input 
+                    className="font-bold text-lg text-sidebar bg-transparent border-0 focus:ring-0 w-full"
+                    value={epic.title}
+                    onChange={e => updateEpicTitle(i, e.target.value)}
+                />
+                <span className="text-xs font-bold text-gray-400 bg-white px-2 py-1 rounded border">{epic.stories.length} Stories</span>
+             </div>
+             <div className="divide-y divide-gray-100">
+               {epic.stories.map((story, j) => (
+                 <div key={story.id} className="p-6 hover:bg-gray-50 transition">
+                    <div className="flex justify-between items-start mb-2">
+                       <input 
+                            className="font-bold text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-accent w-full mr-4"
+                            value={story.title}
+                            onChange={e => updateStory(i, j, 'title', e.target.value)}
+                       />
+                       <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded shrink-0">SP: {story.storyPoints}</span>
+                    </div>
+                    <textarea 
+                        className="w-full text-sm text-gray-600 mb-3 bg-transparent border border-transparent hover:border-gray-200 rounded p-1"
+                        value={story.description}
+                        onChange={e => updateStory(i, j, 'description', e.target.value)}
+                    />
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <p className="text-xs font-bold text-blue-800 mb-1">Acceptance Criteria:</p>
+                      <ul className="list-disc pl-4 text-xs text-blue-700">
+                        {story.acceptanceCriteria.map((ac, k) => <li key={k}>{ac}</li>)}
+                      </ul>
+                    </div>
+                 </div>
+               ))}
+             </div>
+          </div>
+        ))}
+      </div>
+      {epics.length > 0 && (
+         <button onClick={() => onSave({ epics })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg hover:bg-opacity-90">
+           Save Backlog & Continue
+         </button>
+      )}
+    </div>
+  );
+};
+
+const PhaseTeam = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+    const [members, setMembers] = useState<TeamMember[]>(project.phases.team?.members || []);
+    const [loading, setLoading] = useState(false);
+    const [newMemberName, setNewMemberName] = useState('');
+    const [newMemberRole, setNewMemberRole] = useState('');
+
+    const handleGenerate = async () => {
+        setLoading(true);
+        try {
+            const result = await aiService.generateTeamRecommendations(project.phases.vision?.text || '');
+            const newMembers = result.map((r: any, i: number) => ({
+                id: `member-${Date.now()}-${i}`,
+                name: `Candidate ${i+1}`,
+                role: r.role,
+                skills: r.skills,
+                email: 'pending@hire.com'
+            }));
+            setMembers([...members, ...newMembers]);
+        } catch (e) { alert("AI Error"); }
+        setLoading(false);
+    };
+
+    const addMember = () => {
+        if (!newMemberName || !newMemberRole) return;
+        setMembers([...members, {
+            id: `member-${Date.now()}`,
+            name: newMemberName,
+            role: newMemberRole,
+            skills: [],
+            email: ''
+        }]);
+        setNewMemberName('');
+        setNewMemberRole('');
+    };
+
+    const updateMember = (id: string, field: string, val: string) => {
+        setMembers(members.map(m => m.id === id ? { ...m, [field]: val } : m));
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h2 className="text-3xl font-extrabold text-sidebar">6. AGILE TEAM</h2>
+                <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
+                    {loading ? 'Analyzing...' : '✨ Suggest Roles'}
+                </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {members.map(member => (
+                     <div key={member.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
+                         <div className="w-20 h-20 bg-gray-200 rounded-full mb-4 flex items-center justify-center text-2xl">
+                             {member.name[0]}
+                         </div>
+                         <input 
+                            className="font-bold text-gray-800 text-center border-b border-transparent hover:border-gray-200 focus:border-accent bg-transparent"
+                            value={member.name}
+                            onChange={e => updateMember(member.id, 'name', e.target.value)}
+                         />
+                         <input 
+                            className="text-sm text-accent font-bold uppercase mb-2 text-center border-b border-transparent hover:border-gray-200 focus:border-accent bg-transparent"
+                            value={member.role}
+                            onChange={e => updateMember(member.id, 'role', e.target.value)}
+                         />
+                         <div className="flex flex-wrap gap-2 justify-center">
+                             {member.skills?.map(s => <span key={s} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{s}</span>)}
+                         </div>
+                     </div>
+                 ))}
+                 
+                 {/* Add Member Card */}
+                 <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col justify-center gap-2">
+                     <h3 className="font-bold text-gray-500 text-center mb-2">Add Team Member</h3>
+                     <input placeholder="Name" className="p-2 border rounded text-gray-900 bg-white" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} />
+                     <input placeholder="Role" className="p-2 border rounded text-gray-900 bg-white" value={newMemberRole} onChange={e => setNewMemberRole(e.target.value)} />
+                     <button onClick={addMember} className="bg-sidebar text-white py-2 rounded font-bold text-sm mt-2">Add</button>
+                 </div>
+            </div>
+            <button onClick={() => onSave({ members })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Team</button>
+        </div>
+    );
+};
+
+const PhaseEstimates = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+  const [loading, setLoading] = useState(false);
+  // We need local state to allow editing before saving
+  const [localEpics, setLocalEpics] = useState<Epic[]>(project.phases.backlog?.epics || []);
+  const allStories = localEpics.flatMap(e => e.stories);
+  
+  const handleEstimate = async () => {
+    setLoading(true);
+    try {
+        const storiesToEstimate = allStories.filter(s => s.storyPoints === 0);
+        if(storiesToEstimate.length === 0) {
+            alert("All stories already have points. Reset them to re-estimate.");
+            setLoading(false);
+            return;
+        }
+
+        const estimates = await aiService.generateEstimates(storiesToEstimate);
+        
+        let estIndex = 0;
+        const newEpics = localEpics.map(epic => ({
+            ...epic,
+            stories: epic.stories.map(story => {
+                if (story.storyPoints === 0 && estimates[estIndex]) {
+                    const est = estimates[estIndex];
+                    estIndex++;
+                    return { ...story, storyPoints: est.storyPoints, estimatedHours: est.estimatedHours };
+                }
+                return story;
+            })
+        }));
+        setLocalEpics(newEpics);
+
+    } catch(e) { console.error(e); alert("AI Error"); }
+    setLoading(false);
+  };
+
+  const updateStory = (storyId: string, field: 'storyPoints' | 'estimatedHours', value: string) => {
+      const numValue = parseInt(value) || 0;
+      setLocalEpics(prev => prev.map(epic => ({
+          ...epic,
+          stories: epic.stories.map(s => s.id === storyId ? { ...s, [field]: numValue } : s)
+      })));
+  };
+
+  const saveEstimates = async () => {
+      // We need to update the Backlog phase with the new estimates
+      const projectRef = doc(db, 'projects', project.id);
+      await updateDoc(projectRef, { 
+          "phases.backlog.epics": localEpics,
+          "phases.estimates.processed": true 
+      });
+      onSave({ processed: true });
+      alert("Estimates saved successfully!");
+  };
+
+  const totalPoints = allStories.reduce((acc, s) => acc + (s.storyPoints || 0), 0);
+  const totalHours = allStories.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
+
+  return (
+      <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-3xl font-extrabold text-sidebar">7. ESTIMATIONS</h2>
+            <div className="flex gap-4">
+                <div className="text-right">
+                    <p className="text-xs text-gray-500 font-bold uppercase">Total Points</p>
+                    <p className="text-2xl font-bold text-accent">{totalPoints}</p>
+                </div>
+                <div className="text-right">
+                    <p className="text-xs text-gray-500 font-bold uppercase">Total Hours</p>
+                    <p className="text-2xl font-bold text-sidebar">{totalHours}h</p>
+                </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+             <table className="w-full">
+                 <thead className="bg-gray-50 border-b border-gray-200">
+                     <tr>
+                         <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Story</th>
+                         <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase w-32">Story Points</th>
+                         <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 uppercase w-32">Hours</th>
+                     </tr>
+                 </thead>
+                 <tbody className="divide-y divide-gray-100">
+                     {allStories.map((story) => (
+                         <tr key={story.id}>
+                             <td className="px-6 py-4 text-sm text-gray-800">{story.title}</td>
+                             <td className="px-6 py-4 text-center">
+                                 <input 
+                                    type="number" 
+                                    className="w-16 p-1 border rounded text-center text-blue-800 font-bold bg-blue-50"
+                                    value={story.storyPoints || ''}
+                                    onChange={(e) => updateStory(story.id, 'storyPoints', e.target.value)}
+                                 />
+                             </td>
+                             <td className="px-6 py-4 text-center">
+                                 <input 
+                                    type="number" 
+                                    className="w-16 p-1 border rounded text-center text-gray-600 font-mono bg-white"
+                                    value={story.estimatedHours || ''}
+                                    onChange={(e) => updateStory(story.id, 'estimatedHours', e.target.value)}
+                                 />
+                             </td>
+                         </tr>
+                     ))}
+                 </tbody>
+             </table>
+          </div>
+          
+          <div className="flex gap-4">
+              <button onClick={handleEstimate} disabled={loading} className="flex-1 bg-sidebar text-white py-4 rounded-xl font-bold">
+                  {loading ? 'AI is analyzing complexity...' : '✨ Generate Estimations with AI'}
+              </button>
+              <button onClick={saveEstimates} className="flex-1 bg-accent text-white py-4 rounded-xl font-bold shadow-lg">
+                  Save All Estimates
+              </button>
+          </div>
+      </div>
+  )
+}
+
+const PhaseRoadmap = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+    const [roadmap, setRoadmap] = useState<any[]>(project.phases.roadmap?.items || []);
+    const [loading, setLoading] = useState(false);
+
+    const handleGenerate = async () => {
+        setLoading(true);
+        try {
+            const epics = project.phases.backlog?.epics || [];
+            if(epics.length === 0) {
+              alert("Backlog is empty. Please generate backlog first.");
+              return;
+            }
+            const result = await aiService.generateRoadmap(project.phases.vision?.text || '', epics);
+            setRoadmap(result);
+        } catch(e) { console.error(e); alert("AI Error"); }
+        setLoading(false);
+    };
+
+    const updateFeature = (phaseIndex: number, featureIndex: number, val: string) => {
+      const newRoadmap = [...roadmap];
+      newRoadmap[phaseIndex].features[featureIndex] = val;
+      setRoadmap(newRoadmap);
+    }
+
+    const removeFeature = (phaseIndex: number, featureIndex: number) => {
+       const newRoadmap = [...roadmap];
+       newRoadmap[phaseIndex].features.splice(featureIndex, 1);
+       setRoadmap(newRoadmap);
+    }
+
+    const addFeature = (phaseIndex: number) => {
+        const newRoadmap = [...roadmap];
+        newRoadmap[phaseIndex].features.push("New Feature");
+        setRoadmap(newRoadmap);
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h2 className="text-3xl font-extrabold text-sidebar">8. PRODUCT ROADMAP</h2>
+                <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
+                    {loading ? 'Planning...' : '✨ Generate Roadmap'}
+                </button>
+            </div>
+            
+            <div className="space-y-4">
+                {roadmap.map((phase, idx) => (
+                    <div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-accent">
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-800">{phase.phase}</h3>
+                                <p className="text-sm text-gray-500 font-medium">Duration: {phase.duration}</p>
+                            </div>
+                            <span className="bg-accent/10 text-accent px-3 py-1 rounded text-xs font-bold uppercase">{phase.focus}</span>
+                        </div>
+                        <div className="space-y-2">
+                             <h4 className="text-xs font-bold text-gray-400 uppercase">Associated Stories / Features</h4>
+                            {phase.features.map((f: string, i: number) => (
+                                <div key={i} className="flex items-center gap-2 bg-gray-50 p-2 rounded group">
+                                    <span className="w-2 h-2 rounded-full bg-sidebar shrink-0"></span>
+                                    <input 
+                                      className="w-full bg-transparent border-none text-sm text-gray-700 focus:ring-0"
+                                      value={f}
+                                      onChange={e => updateFeature(idx, i, e.target.value)}
+                                    />
+                                    <button onClick={() => removeFeature(idx, i)} className="text-gray-400 hover:text-red-500 px-2 opacity-0 group-hover:opacity-100">×</button>
+                                </div>
+                            ))}
+                            <button onClick={() => addFeature(idx)} className="text-xs text-accent font-bold hover:underline">+ Add Feature</button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            {roadmap.length > 0 && (
+                <button onClick={() => onSave({ items: roadmap })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Roadmap</button>
+            )}
+        </div>
+    );
+};
+
+const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+    // Tabs state
+    const [view, setView] = useState<'planning' | 'board' | 'review' | 'retrospective'>('board');
+    // Local Epics state (for drag/drop and editing before save)
+    const [localEpics, setLocalEpics] = useState<Epic[]>(project.phases.backlog?.epics || []);
+    // Sprint Configuration
+    const [duration, setDuration] = useState<number>(project.phases.sprint?.durationWeeks || 2);
+    const [sprintGoal, setSprintGoal] = useState<string>(project.phases.sprint?.goal || '');
+    const [reviewNotes, setReviewNotes] = useState<string>(project.phases.sprint?.review || '');
+    const [retroNotes, setRetroNotes] = useState<string>(project.phases.sprint?.retrospective || '');
+    
+    // Capacity Planning State
+    const [memberCapacity, setMemberCapacity] = useState<Record<string, number>>(project.phases.sprint?.memberCapacity || {});
+    // Mood & Impediments State
+    const [moods, setMoods] = useState<Record<string, 'happy' | 'neutral' | 'sad' | 'stressed'>>(project.phases.sprint?.moods || {});
+    const [impediments, setImpediments] = useState<Impediment[]>(project.phases.sprint?.impediments || []);
+    const [newImpediment, setNewImpediment] = useState('');
+
+    // Daily Standup Timer State
+    const [dailyDurationMinutes, setDailyDurationMinutes] = useState(project.phases.sprint?.dailyMeetingDuration || 15);
+    const [dailySeconds, setDailySeconds] = useState(dailyDurationMinutes * 60);
+    const [isDailyActive, setIsDailyActive] = useState(false);
+    const dailyIntervalRef = useRef<any>(null);
+    
+    // Modifiable Sprint Time
+    const [isEditingEndDate, setIsEditingEndDate] = useState(false);
+    const [newEndDate, setNewEndDate] = useState(project.phases.sprint?.endDate || '');
+    
+    const [aiLoading, setAiLoading] = useState(false);
+
+    // Team Members for assignment
+    const teamMembers = project.phases.team?.members || [];
+    
+    // Timer state
+    const [timeLeft, setTimeLeft] = useState<{days: number, hours: number}>({ days: 0, hours: 0 });
+
+    useEffect(() => {
+        if (project.phases.sprint?.startDate && project.phases.sprint?.endDate && project.phases.sprint?.isActive) {
+            const calculateTime = () => {
+                const now = new Date().getTime();
+                const end = new Date(project.phases.sprint!.endDate).getTime();
+                const diff = end - now;
+                
+                if (diff > 0) {
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    setTimeLeft({ days, hours });
+                } else {
+                    setTimeLeft({ days: 0, hours: 0 });
+                }
+            };
+            calculateTime();
+            const interval = setInterval(calculateTime, 1000 * 60); // Update every minute
+            return () => clearInterval(interval);
+        }
+    }, [project.phases.sprint]);
+
+    // Daily Timer Effect
+    useEffect(() => {
+        if (isDailyActive) {
+            dailyIntervalRef.current = setInterval(() => {
+                setDailySeconds(prev => {
+                    if (prev <= 0) {
+                        setIsDailyActive(false);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        } else if (dailyIntervalRef.current) {
+            clearInterval(dailyIntervalRef.current);
+        }
+        return () => {
+            if (dailyIntervalRef.current) clearInterval(dailyIntervalRef.current);
+        };
+    }, [isDailyActive]);
+
+    // Helpers
+    const getSprintStories = () => localEpics.flatMap(e => e.stories).filter(s => s.isInSprint);
+    const getBacklogStories = () => localEpics.flatMap(e => e.stories).filter(s => !s.isInSprint);
+
+    // Calculations
+    const totalSprintSP = getSprintStories().reduce((acc, s) => acc + (s.storyPoints || 0), 0);
+    const totalSprintHours = getSprintStories().reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
+    const totalTeamCapacity = (Object.values(memberCapacity) as number[]).reduce((a, b) => a + b, 0);
+    const isOverloaded = totalTeamCapacity > 0 && totalSprintHours > totalTeamCapacity;
+
+    const toggleSprintStatus = (storyId: string) => {
+        setLocalEpics(prev => prev.map(epic => ({
+            ...epic,
+            stories: epic.stories.map(s => s.id === storyId ? { ...s, isInSprint: !s.isInSprint } : s)
+        })));
+    };
+
+    const updateStoryStatus = (storyId: string, status: 'todo' | 'doing' | 'done') => {
+        const timestamp = status === 'done' ? Date.now() : undefined;
+        setLocalEpics(prev => prev.map(epic => ({
+            ...epic,
+            stories: epic.stories.map(s => s.id === storyId ? { ...s, status, completedAt: timestamp } : s)
+        })));
+    };
+
+    const toggleAssignee = (storyId: string, memberId: string) => {
+        setLocalEpics(prev => prev.map(epic => ({
+            ...epic,
+            stories: epic.stories.map(s => {
+                if (s.id !== storyId) return s;
+                const currentAssignees = s.assigneeIds || [];
+                const newAssignees = currentAssignees.includes(memberId) 
+                    ? currentAssignees.filter(id => id !== memberId)
+                    : [...currentAssignees, memberId];
+                return { ...s, assigneeIds: newAssignees };
+            })
+        })));
+    };
+
+    const handleCapacityChange = (memberId: string, hours: string) => {
+        setMemberCapacity(prev => ({
+            ...prev,
+            [memberId]: parseInt(hours) || 0
+        }));
+    };
+
+    // --- Impediments Logic ---
+    const addImpediment = () => {
+        if (!newImpediment) return;
+        const imp: Impediment = {
+            id: `imp-${Date.now()}`,
+            description: newImpediment,
+            memberId: auth.currentUser?.uid || 'unknown',
+            createdAt: Date.now(),
+            status: 'open'
+        };
+        setImpediments([...impediments, imp]);
+        setNewImpediment('');
+    }
+
+    const resolveImpediment = (id: string) => {
+        setImpediments(prev => prev.map(imp => imp.id === id ? { ...imp, status: 'resolved' } : imp));
+    }
+
+    // --- Mood Logic ---
+    const updateMood = (memberId: string, dayIndex: number, mood: 'happy' | 'neutral' | 'sad' | 'stressed') => {
+        setMoods(prev => ({ ...prev, [`${memberId}_${dayIndex}`]: mood }));
+    }
+
+    const generateGoal = async () => {
+        const stories = getSprintStories();
+        if (stories.length === 0) {
+            alert("Select stories first");
+            return;
+        }
+        setAiLoading(true);
+        try {
+            const goal = await aiService.generateSprintGoal(stories.map(s => s.title));
+            setSprintGoal(goal);
+        } catch(e) { console.error(e); }
+        setAiLoading(false);
+    };
+
+    const startSprint = async () => {
+        if (!sprintGoal) { alert("Please set a Sprint Goal"); return; }
+        
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(startDate.getDate() + (duration * 7));
+
+        const sprintData = {
+            isActive: true,
+            number: (project.phases.sprint?.number || 0) + 1,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            durationWeeks: duration,
+            goal: sprintGoal,
+            memberCapacity,
+            moods: {},
+            impediments: [],
+            dailyMeetingDuration: dailyDurationMinutes,
+            review: '',
+            retrospective: ''
+        };
+        
+        // Save to DB
+        const projectRef = doc(db, 'projects', project.id);
+        await updateDoc(projectRef, { 
+             "phases.backlog.epics": localEpics,
+             "phases.sprint": sprintData
+        });
+        alert(`Sprint ${sprintData.number} Started!`);
+        setView('board');
+    };
+
+    const saveChanges = async () => {
+         const projectRef = doc(db, 'projects', project.id);
+         let updatedSprintData: any = { 
+             review: reviewNotes,
+             retrospective: retroNotes,
+             goal: sprintGoal,
+             memberCapacity: memberCapacity,
+             moods: moods,
+             impediments: impediments,
+             dailyMeetingDuration: dailyDurationMinutes
+         };
+
+         // If user edited the end date
+         if (newEndDate && new Date(newEndDate).getTime() !== new Date(project.phases.sprint?.endDate || '').getTime()) {
+             updatedSprintData.endDate = newEndDate;
+         }
+
+         // Update specific nested fields map
+         const updates: any = {
+             "phases.backlog.epics": localEpics
+         };
+         
+         // Dynamically add sprint fields to update map to avoid overwriting entire object if not needed, 
+         // but for deep nested simple objects commonly easier to merge or rewrite specific paths.
+         // Firestore update nested syntax:
+         Object.keys(updatedSprintData).forEach(key => {
+             updates[`phases.sprint.${key}`] = updatedSprintData[key];
+         });
+
+         await updateDoc(projectRef, updates);
+         setIsEditingEndDate(false);
+         alert("Sprint data saved!");
+    };
+
+    // --- Sub-components for Sprint ---
+
+    const DailyTimer = () => {
+        const formatTime = (secs: number) => {
+            const m = Math.floor(secs / 60);
+            const s = secs % 60;
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        };
+
+        return (
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
+                <h4 className="font-bold text-gray-500 uppercase text-xs mb-2">Daily Standup</h4>
+                <div className="text-4xl font-mono font-bold text-gray-800 mb-2">
+                    {formatTime(dailySeconds)}
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setIsDailyActive(!isDailyActive)}
+                        className={`px-3 py-1 rounded text-xs font-bold text-white ${isDailyActive ? 'bg-yellow-500' : 'bg-green-500'}`}
+                    >
+                        {isDailyActive ? 'Pause' : 'Start'}
+                    </button>
+                    <button 
+                        onClick={() => { setIsDailyActive(false); setDailySeconds(dailyDurationMinutes * 60); }}
+                        className="px-3 py-1 rounded text-xs font-bold bg-gray-200 text-gray-600"
+                    >
+                        Reset
+                    </button>
+                </div>
+                <div className="mt-2 flex items-center gap-1">
+                    <span className="text-[10px] text-gray-400">Duration:</span>
+                    <input 
+                        type="number" 
+                        className="w-10 text-[10px] border rounded text-center"
+                        value={dailyDurationMinutes}
+                        onChange={(e) => {
+                            const val = parseInt(e.target.value) || 15;
+                            setDailyDurationMinutes(val);
+                            setDailySeconds(val * 60);
+                        }}
+                    />
+                    <span className="text-[10px] text-gray-400">min</span>
+                </div>
+            </div>
+        )
+    }
+
+    const BurndownChart = () => {
+        const totalHours = getSprintStories().reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
+        const sprintDays = duration * 7;
+        const startDate = project.phases.sprint?.startDate ? new Date(project.phases.sprint.startDate).getTime() : Date.now();
+        
+        const data = [];
+        const idealSlope = totalHours / sprintDays;
+
+        for (let i = 0; i <= sprintDays; i++) {
+            const dayTimestamp = startDate + (i * 24 * 60 * 60 * 1000);
+            // "Actual" Logic: Only show point if it's the start day, OR a past day, OR a day logged in MoodBoard
+            const isLoggedDay = Object.keys(moods).some(k => k.endsWith(`_${i}`));
+            const isPast = dayTimestamp < Date.now();
+            
+            let actual = null;
+
+            if (i === 0 || isPast || isLoggedDay) {
+                 const storiesDoneBeforeNow = getSprintStories().filter(s => 
+                    s.completedAt && s.completedAt <= dayTimestamp
+                 );
+                 const hoursDone = storiesDoneBeforeNow.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
+                 actual = totalHours - hoursDone;
+                 if (actual < 0) actual = 0;
+            }
+
+            data.push({
+                day: i,
+                ideal: Math.max(0, totalHours - (idealSlope * i)),
+                actual: actual
+            });
+        }
+
+        return (
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col h-64">
+                <h4 className="text-sm font-bold text-gray-500 uppercase mb-4">Sprint Burndown (Hours)</h4>
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={data}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="day" label={{ value: 'Day', position: 'insideBottomRight', offset: -5 }} type="number" domain={[0, sprintDays]} tickCount={sprintDays + 1} />
+                        <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="linear" dataKey="ideal" stroke="#9CA3AF" strokeDasharray="5 5" name="Ideal Burn" dot={false} strokeWidth={2} />
+                        <Line type="monotone" dataKey="actual" stroke="#FF5A6E" strokeWidth={3} name="Actual Remaining" connectNulls={true} />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+        );
+    };
+
+    const ImpedimentsTracker = () => {
+        return (
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col flex-1 min-h-[200px]">
+                <h4 className="font-bold text-red-500 uppercase text-xs mb-3">Impediments</h4>
+                <div className="flex gap-2 mb-3">
+                    <input 
+                        className="w-full text-sm border rounded p-1" 
+                        placeholder="Add blocker..." 
+                        value={newImpediment} 
+                        onChange={e => setNewImpediment(e.target.value)}
+                    />
+                    <button onClick={addImpediment} className="bg-red-500 text-white px-3 rounded font-bold text-xs">+</button>
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                    {impediments.filter(i => i.status === 'open').map(imp => (
+                        <div key={imp.id} className="bg-red-50 border border-red-100 p-2 rounded text-xs flex justify-between items-center">
+                            <span className="text-red-800">{imp.description}</span>
+                            <button onClick={() => resolveImpediment(imp.id)} className="text-green-600 font-bold hover:underline">Solve</button>
+                        </div>
+                    ))}
+                    {impediments.filter(i => i.status === 'open').length === 0 && <p className="text-xs text-gray-400">No active blocks.</p>}
+                </div>
+            </div>
+        )
+    }
+
+    const MoodBoard = () => {
+        const sprintDays = duration * 7;
+        const moodOptions = [
+            { id: 'happy', icon: '😄' },
+            { id: 'neutral', icon: '😐' },
+            { id: 'sad', icon: '😟' },
+            { id: 'stressed', icon: '😫' }
+        ];
+
+        return (
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+                <h4 className="font-bold text-accent uppercase text-xs mb-3">Team Mood Board</h4>
+                <table className="min-w-full text-xs">
+                    <thead>
+                        <tr>
+                            <th className="text-left py-2 px-2 text-gray-500 w-24">Member</th>
+                            {Array.from({length: sprintDays}).map((_, i) => (
+                                <th key={i} className="py-2 px-1 text-center text-gray-400 min-w-[30px]">D{i}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {teamMembers.map(member => (
+                            <tr key={member.id} className="border-t border-gray-50">
+                                <td className="py-2 px-2 font-bold text-gray-700 truncate max-w-[100px]">{member.name}</td>
+                                {Array.from({length: sprintDays}).map((_, i) => {
+                                    const key = `${member.id}_${i}`;
+                                    const currentMood = moods[key];
+                                    return (
+                                        <td key={i} className="text-center p-1">
+                                            <div className="relative group">
+                                                <button className="text-lg hover:scale-110 transition">
+                                                    {moodOptions.find(m => m.id === currentMood)?.icon || '⚪'}
+                                                </button>
+                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 bg-white shadow-xl rounded-lg p-2 hidden group-hover:flex gap-1 z-10 border">
+                                                    {moodOptions.map(opt => (
+                                                        <button 
+                                                            key={opt.id} 
+                                                            onClick={() => updateMood(member.id, i, opt.id as any)}
+                                                            className="hover:bg-gray-100 rounded p-1"
+                                                        >
+                                                            {opt.icon}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </td>
+                                    )
+                                })}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        )
+    }
+
+    const Column = ({ status, label, color }: any) => {
+        const stories = getSprintStories().filter(s => s.status === status);
+        return (
+            <div 
+                className="flex-1 bg-gray-100 rounded-xl p-4 flex flex-col overflow-hidden h-full"
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => {
+                    const id = e.dataTransfer.getData("storyId");
+                    updateStoryStatus(id, status);
+                }}
+            >
+                <h3 className={`font-bold text-sm uppercase mb-4 text-${color}-600`}>{label} ({stories.length})</h3>
+                <div className="flex-1 space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                    {stories.map(story => (
+                        <div 
+                            key={story.id} 
+                            draggable 
+                            onDragStart={e => e.dataTransfer.setData("storyId", story.id)}
+                            className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 cursor-move hover:shadow-md transition relative group"
+                        >
+                            <div className="flex justify-between items-start mb-2">
+                                <p className="font-bold text-gray-800 text-sm">{story.title}</p>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100 font-mono">
+                                    {story.storyPoints} SP
+                                </span>
+                                <span className="text-xs bg-gray-50 text-gray-600 px-2 py-0.5 rounded border border-gray-200 font-mono">
+                                    {story.estimatedHours}h
+                                </span>
+                            </div>
+
+                            <div className="flex justify-between items-center border-t border-gray-100 pt-2 mt-2">
+                                <div className="flex -space-x-2 overflow-hidden">
+                                    {story.assigneeIds && story.assigneeIds.length > 0 ? (
+                                        story.assigneeIds.map(uid => {
+                                            const member = teamMembers.find(m => m.id === uid);
+                                            return (
+                                                <div key={uid} className="inline-block h-6 w-6 rounded-full ring-2 ring-white bg-sidebar text-white flex items-center justify-center text-[10px] font-bold" title={member?.name}>
+                                                    {member?.name?.[0] || '?'}
+                                                </div>
+                                            )
+                                        })
+                                    ) : (
+                                        <span className="text-xs text-gray-400 italic">Unassigned</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6 h-full flex flex-col">
+             {/* Sprint Header */}
+             <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-shrink-0">
+                 <div>
+                    <h2 className="text-2xl font-extrabold text-sidebar">
+                        {project.phases.sprint?.isActive ? `SPRINT ${project.phases.sprint.number}` : 'SPRINT PLANNING'}
+                    </h2>
+                    {project.phases.sprint?.isActive && (
+                        <p className="text-xs text-gray-500 font-bold uppercase mt-1">Goal: {project.phases.sprint.goal}</p>
+                    )}
+                 </div>
+                 
+                 {project.phases.sprint?.isActive && (
+                     <div className="flex flex-col items-center bg-gray-900 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-gray-800 transition" onClick={() => setIsEditingEndDate(true)} title="Click to Edit End Date">
+                         <span className="text-[10px] uppercase font-bold text-accent">Time Remaining</span>
+                         <span className="font-mono text-xl font-bold">{timeLeft.days}d {timeLeft.hours}h</span>
+                     </div>
+                 )}
+
+                 {isEditingEndDate && (
+                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                         <div className="bg-white p-6 rounded-xl shadow-xl">
+                             <h4 className="font-bold mb-4">Edit Sprint End Date</h4>
+                             <input 
+                                type="datetime-local" 
+                                className="border p-2 rounded mb-4"
+                                value={newEndDate ? newEndDate.slice(0, 16) : ''}
+                                onChange={e => setNewEndDate(e.target.value)}
+                             />
+                             <div className="flex gap-2">
+                                 <button onClick={saveChanges} className="bg-accent text-white px-4 py-2 rounded font-bold">Save New Date</button>
+                                 <button onClick={() => setIsEditingEndDate(false)} className="bg-gray-200 px-4 py-2 rounded font-bold">Cancel</button>
+                             </div>
+                         </div>
+                     </div>
+                 )}
+
+                 <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                     {['planning', 'board', 'review', 'retrospective'].map((t) => (
+                         <button 
+                            key={t}
+                            onClick={() => setView(t as any)} 
+                            className={`px-4 py-2 rounded-md font-bold text-sm capitalize transition-all ${view === t ? 'bg-white text-sidebar shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                         >
+                            {t}
+                         </button>
+                     ))}
+                 </div>
+                 <button onClick={saveChanges} className="bg-sidebar text-white px-4 py-2 rounded-lg font-bold text-sm">Save</button>
+             </div>
+             
+             {/* Content Area */}
+             <div className="flex-1 overflow-hidden">
+                 {view === 'planning' && (
+                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full overflow-y-auto pb-4">
+                         {/* Backlog Column */}
+                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col h-full min-h-[500px]">
+                             <h4 className="font-bold text-gray-500 uppercase text-xs mb-4">Product Backlog</h4>
+                             <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                 {getBacklogStories().map(s => (
+                                     <div key={s.id} className="p-4 border rounded-xl hover:bg-gray-50 group relative transition bg-white">
+                                         <div className="flex justify-between items-start">
+                                             <span className="text-sm font-medium text-gray-800">{s.title}</span>
+                                             <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-mono">{s.storyPoints} SP</span>
+                                         </div>
+                                         <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+                                             <button onClick={() => toggleSprintStatus(s.id)} className="text-xs bg-sidebar text-white px-3 py-1.5 rounded-lg font-bold">Add to Sprint →</button>
+                                         </div>
+                                     </div>
+                                 ))}
+                                 {getBacklogStories().length === 0 && <p className="text-sm text-gray-400 text-center py-10">Backlog empty.</p>}
+                             </div>
+                         </div>
+
+                         {/* Sprint Composition Column */}
+                         <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border-2 border-accent/20 flex flex-col h-full overflow-y-auto">
+                             {/* Capacity Planning Section */}
+                             <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                 <h4 className="font-bold text-gray-700 uppercase text-xs mb-3">Capacity Planning (Hours)</h4>
+                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                     {teamMembers.map(m => (
+                                         <div key={m.id}>
+                                             <label className="text-[10px] font-bold text-gray-500 block mb-1">{m.name}</label>
+                                             <input 
+                                                type="number"
+                                                className="w-full text-sm font-bold text-gray-800 p-2 border rounded bg-white"
+                                                placeholder="Hours"
+                                                value={memberCapacity[m.id] || 0}
+                                                onChange={e => handleCapacityChange(m.id, e.target.value)}
+                                             />
+                                         </div>
+                                     ))}
+                                 </div>
+                             </div>
+
+                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                                 <h4 className="font-bold text-accent uppercase text-xs">Sprint Candidate</h4>
+                                 <div className="flex flex-wrap items-center gap-4">
+                                     <div className="flex items-center gap-2">
+                                         <span className="text-xs font-bold text-gray-600">Weeks:</span>
+                                         <select 
+                                            value={duration} 
+                                            onChange={e => setDuration(Number(e.target.value))}
+                                            className="bg-white border border-gray-200 rounded px-2 py-1 text-sm font-bold text-gray-800"
+                                         >
+                                             {[1, 2, 3, 4].map(w => <option key={w} value={w}>{w}</option>)}
+                                         </select>
+                                     </div>
+                                     <div className="flex gap-2">
+                                          <div className="text-xs font-bold bg-blue-50 text-blue-800 px-3 py-1 rounded-full border border-blue-100">
+                                             {totalSprintSP} SP
+                                         </div>
+                                         <div className={`text-xs font-bold px-3 py-1 rounded-full border flex items-center gap-2 ${isOverloaded ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                                             {totalSprintHours} / {totalTeamCapacity} h
+                                             {isOverloaded && <span title="Over Capacity!">⚠️</span>}
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+
+                             {isOverloaded && (
+                                 <div className="mb-4 bg-red-50 text-red-800 p-3 rounded-lg text-sm border border-red-100 flex items-center gap-2">
+                                     <span>⚠️ Warning: Sprint load ({totalSprintHours}h) exceeds Team Capacity ({totalTeamCapacity}h). Consider removing stories.</span>
+                                 </div>
+                             )}
+
+                             <div className="flex gap-2 mb-4">
+                                <input 
+                                    placeholder="Enter Sprint Goal..."
+                                    className="flex-1 text-lg font-bold text-gray-800 border-none border-b-2 border-gray-100 focus:border-accent focus:ring-0 px-0 placeholder-gray-300 bg-transparent"
+                                    value={sprintGoal}
+                                    onChange={e => setSprintGoal(e.target.value)}
+                                />
+                                <button onClick={generateGoal} disabled={aiLoading} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold px-3 py-1 rounded">
+                                    {aiLoading ? '...' : '✨ AI Goal'}
+                                </button>
+                             </div>
+
+                             <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar mb-6 min-h-[200px]">
+                                 {getSprintStories().map(s => (
+                                     <div key={s.id} className="p-4 border border-accent/20 bg-accent/5 rounded-xl">
+                                         <div className="flex justify-between items-start mb-2">
+                                             <div>
+                                                 <span className="text-sm font-bold text-gray-800">{s.title}</span>
+                                                 <div className="flex gap-3 mt-1 text-xs text-gray-600">
+                                                     <span className="bg-white/50 px-1 rounded">{s.storyPoints} SP</span>
+                                                     <span className="bg-white/50 px-1 rounded">{s.estimatedHours}h</span>
+                                                 </div>
+                                             </div>
+                                             <button onClick={() => toggleSprintStatus(s.id)} className="text-gray-400 hover:text-red-500">×</button>
+                                         </div>
+                                         
+                                         {/* Assignees */}
+                                         <div className="mt-3 flex flex-wrap gap-2 items-center">
+                                             <span className="text-[10px] uppercase font-bold text-gray-500 mr-2">Assign to:</span>
+                                             {teamMembers.map(m => (
+                                                 <button 
+                                                    key={m.id}
+                                                    onClick={() => toggleAssignee(s.id, m.id)}
+                                                    className={`px-2 py-1 rounded-full text-[10px] font-bold border transition-colors ${
+                                                        s.assigneeIds?.includes(m.id) 
+                                                            ? 'bg-sidebar text-white border-sidebar' 
+                                                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
+                                                    }`}
+                                                 >
+                                                     {m.name}
+                                                 </button>
+                                             ))}
+                                         </div>
+                                     </div>
+                                 ))}
+                                 {getSprintStories().length === 0 && <p className="text-sm text-gray-400 text-center py-10">Select stories from the backlog.</p>}
+                             </div>
+
+                             <button 
+                                onClick={startSprint}
+                                disabled={getSprintStories().length === 0 || !sprintGoal}
+                                className="w-full bg-accent text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                             >
+                                 🚀 Start Sprint
+                             </button>
+                         </div>
+                     </div>
+                 )}
+
+                 {view === 'board' && (
+                     <div className="flex flex-row h-full gap-4 overflow-hidden pb-2">
+                         {/* Left: Kanban */}
+                         <div className="flex-1 flex gap-4 min-w-0 overflow-x-auto">
+                             <Column status="todo" label="To Do" color="gray" />
+                             <Column status="doing" label="Doing" color="blue" />
+                             <Column status="done" label="Done" color="green" />
+                         </div>
+                         
+                         {/* Right: Daily Dashboard */}
+                         <div className="w-1/3 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
+                             <DailyTimer />
+                             <MoodBoard />
+                             <ImpedimentsTracker />
+                             <BurndownChart />
+                         </div>
+                     </div>
+                 )}
+
+                 {view === 'review' && (
+                     <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto pb-6">
+                         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                             <h3 className="text-2xl font-bold text-sidebar mb-2">Sprint Review</h3>
+                             <p className="text-gray-500 mb-6">Demonstrate the hard work of the entire team to stakeholders.</p>
+                             
+                             <div className="space-y-4">
+                                 <label className="block text-sm font-bold text-gray-700">Meeting Notes & Feedback</label>
+                                 <textarea 
+                                    className="w-full h-96 p-4 border rounded-xl focus:ring-accent focus:border-accent text-gray-800 bg-gray-50"
+                                    placeholder="• Stakeholder feedback on feature X...&#10;• Proposed changes for next sprint...&#10;• Accepted stories..."
+                                    value={reviewNotes}
+                                    onChange={e => setReviewNotes(e.target.value)}
+                                 />
+                             </div>
+                         </div>
+                     </div>
+                 )}
+
+                 {view === 'retrospective' && (
+                     <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto pb-6">
+                         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                             <h3 className="text-2xl font-bold text-sidebar mb-2">Sprint Retrospective</h3>
+                             <p className="text-gray-500 mb-6">Inspect and adapt. How can we improve our process?</p>
+                             
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-96">
+                                 <div className="bg-green-50 p-4 rounded-xl border border-green-100 flex flex-col">
+                                     <h4 className="font-bold text-green-800 mb-2">What went well?</h4>
+                                     <textarea 
+                                        className="flex-1 bg-transparent border-none resize-none focus:ring-0 text-gray-700 text-sm"
+                                        placeholder="Type here..."
+                                        value={retroNotes.split('---')[0] || ''}
+                                        onChange={e => setRetroNotes(`${e.target.value}---${retroNotes.split('---')[1] || ''}`)}
+                                     />
+                                 </div>
+                                 <div className="bg-red-50 p-4 rounded-xl border border-red-100 flex flex-col">
+                                     <h4 className="font-bold text-red-800 mb-2">What can be improved?</h4>
+                                      <textarea 
+                                        className="flex-1 bg-transparent border-none resize-none focus:ring-0 text-gray-700 text-sm"
+                                        placeholder="Type here..."
+                                        value={retroNotes.split('---')[1] || ''}
+                                        onChange={e => setRetroNotes(`${retroNotes.split('---')[0] || ''}---${e.target.value}`)}
+                                     />
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+                 )}
+             </div>
+        </div>
+    );
+}
+
+const PhaseStats = () => {
+    const data = [
+        { name: 'Sprint 1', sp: 20, velocity: 20 },
+        { name: 'Sprint 2', sp: 30, velocity: 25 },
+        { name: 'Sprint 3', sp: 25, velocity: 25 },
+    ];
+
+    return (
+        <div className="space-y-8">
+            <h2 className="text-3xl font-extrabold text-sidebar">10. STATISTICS</h2>
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 h-96">
+                <h3 className="font-bold mb-6">Velocity Chart</h3>
+                <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="sp" fill="#FF5A6E" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        </div>
+    )
+}
+
+const PhaseObeya = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+    const [risks, setRisks] = useState<any[]>(project.phases.obeya?.risks || []);
+    const [loading, setLoading] = useState(false);
+
+    const handleAnalyze = async () => {
+        setLoading(true);
+        try {
+            const result = await aiService.analyzeRisks(project);
+            setRisks(result);
+        } catch(e) { console.error(e); alert("AI Error"); }
+        setLoading(false);
+    };
+
+    return (
+        <div className="space-y-8 animate-fade-in">
+             <div className="flex justify-between items-center">
+                <h2 className="text-3xl font-extrabold text-sidebar">11. DIGITAL OBEYA ROOM</h2>
+                <button onClick={handleAnalyze} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
+                    {loading ? 'Analyzing Risks...' : '🔍 Analyze Risks'}
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Vision Card */}
+                <div className="col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                     <h3 className="font-bold text-gray-500 uppercase text-xs mb-4">Vision & Goals</h3>
+                     <div className="prose prose-sm line-clamp-6 text-gray-600" dangerouslySetInnerHTML={{__html: project.phases.vision?.text || 'No vision defined'}} />
+                </div>
+
+                {/* Velocity Card (Reuse Stats data logic in real app) */}
+                <div className="col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center items-center">
+                    <h3 className="font-bold text-gray-500 uppercase text-xs mb-2">Team Velocity</h3>
+                    <div className="text-5xl font-extrabold text-accent">24</div>
+                    <p className="text-gray-400 text-xs mt-1">Story Points / Sprint</p>
+                </div>
+
+                {/* Status Card */}
+                <div className="col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 className="font-bold text-gray-500 uppercase text-xs mb-4">Sprint Status</h3>
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-gray-700">Completion</span>
+                        <span className="text-sm font-bold text-green-600">65%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div className="bg-green-600 h-2.5 rounded-full" style={{width: '65%'}}></div>
+                    </div>
+                </div>
+
+                {/* Risks Board */}
+                <div className="col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 className="font-bold text-gray-800 mb-6">⚠️ Project Risks & Mitigation</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {risks.map((risk, i) => (
+                            <div key={i} className="border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
+                                <div className="flex justify-between mb-2">
+                                    <h4 className="font-bold text-red-900">{risk.risk}</h4>
+                                    <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded font-bold">{risk.impact}</span>
+                                </div>
+                                <p className="text-sm text-red-700">🛡️ {risk.mitigation}</p>
+                            </div>
+                        ))}
+                    </div>
+                    {risks.length > 0 && (
+                         <button onClick={() => onSave({ risks })} className="mt-4 text-xs text-gray-500 underline hover:text-sidebar">Save Risk Analysis</button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- Main App Logic ---
+
+const ProjectManager = () => {
+  const { projectId, phase } = useParams();
+  const [project, setProject] = useState<Project | null>(null);
+
+  useEffect(() => {
+    if (!projectId) return;
+    const unsubscribe = onSnapshot(doc(db, "projects", projectId), (doc) => {
+      setProject({ id: doc.id, ...doc.data() } as Project);
+    });
+    return () => unsubscribe();
+  }, [projectId]);
+
+  const handleSavePhase = async (phaseName: string, data: any) => {
+    if (!project) return;
+    const projectRef = doc(db, 'projects', project.id);
+    await updateDoc(projectRef, {
+      [`phases.${phaseName}`]: data
+    });
+    // Optional: Auto-navigate to next phase logic could go here
+  };
+
+  if (!project) return <div className="flex items-center justify-center h-screen">Loading...</div>;
+
+  const renderPhase = () => {
+    switch(phase) {
+      case 'mindset': return <PhaseMindset project={project} onSave={(data) => handleSavePhase('mindset', data)} />;
+      case 'vision': return <PhaseVision project={project} onSave={(data) => handleSavePhase('vision', data)} />;
+      case 'objectives': return <PhaseObjectives project={project} onSave={(data) => handleSavePhase('objectives', data)} />;
+      case 'kpis': return <PhaseKPIs project={project} onSave={(data) => handleSavePhase('kpis', data)} />;
+      case 'backlog': return <PhaseBacklog project={project} onSave={(data) => handleSavePhase('backlog', data)} />;
+      case 'team': return <PhaseTeam project={project} onSave={(data) => handleSavePhase('team', data)} />;
+      case 'estimates': return <PhaseEstimates project={project} onSave={(data) => handleSavePhase('estimates', data)} />;
+      case 'roadmap': return <PhaseRoadmap project={project} onSave={(data) => handleSavePhase('roadmap', data)} />;
+      case 'sprint': return <PhaseSprint project={project} onSave={(data) => handleSavePhase('sprint', data)} />;
+      case 'stats': return <PhaseStats />;
+      case 'obeya': return <PhaseObeya project={project} onSave={(data) => handleSavePhase('obeya', data)} />;
+      default: return <div>Phase not implemented in this demo</div>;
+    }
+  };
+
+  return (
+    <Layout currentProject={project}>
+      {renderPhase()}
+    </Layout>
+  );
+};
+
+export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      if (u) setUser({ uid: u.uid, email: u.email, displayName: u.displayName, role: 'admin' }); // Mock admin role
+      else setUser(null);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) return null;
+
+  return (
+    <HashRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/projects" element={user ? <ProjectList /> : <Navigate to="/login" />} />
+        <Route path="/project/:projectId/:phase" element={user ? <ProjectManager /> : <Navigate to="/login" />} />
+        <Route path="*" element={<Navigate to={user ? "/projects" : "/login"} />} />
+      </Routes>
+    </HashRouter>
+  );
+}
