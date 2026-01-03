@@ -5,6 +5,8 @@ import { collection, query, where, getDocs, addDoc, doc, onSnapshot, updateDoc, 
 import { auth, db } from './firebase';
 import { Project, User, Epic, UserStory, TeamMember, Impediment, ReleasePlan, MonteCarloResult } from './types';
 import { Layout } from './components/Layout';
+import SprintCenter from './src/components/SprintCenter/SprintCenter';
+import ExecutiveObeya from './src/components/ExecutiveObeya/ExecutiveObeya';
 import { aiService } from './services/aiService';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -3657,31 +3659,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
     );
 }
 
-const PhaseStats = () => {
-    const data = [
-        { name: 'Sprint 1', sp: 20, velocity: 20 },
-        { name: 'Sprint 2', sp: 30, velocity: 25 },
-        { name: 'Sprint 3', sp: 25, velocity: 25 },
-    ];
 
-    return (
-        <div className="space-y-8">
-            <h2 className="text-3xl font-extrabold text-sidebar">10. STATISTICS</h2>
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 h-96">
-                <h3 className="font-bold mb-6">Velocity Chart</h3>
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="sp" fill="#FF5A6E" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-        </div>
-    )
-}
 
 const PhaseObeya = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     const [risks, setRisks] = useState<any[]>(project.phases.obeya?.risks || []);
@@ -3800,6 +3778,17 @@ const ProjectManager = () => {
         return () => unsubscribe();
     }, [projectId]);
 
+    const handleUpdateProject = async (updatedProject: Project) => {
+        if (!project) return;
+        const projectRef = doc(db, 'projects', project.id);
+        // We can't overwrite everything easily if we just have the project object without clean undefined handling
+        // But for now let's assume we just want to save specific phases if modified
+        // Or simpler: just update the phases that SprintCenter touches
+        // For 'SprintCenter' we might modify 'backlog' and 'sprint' phases.
+
+        await setDoc(projectRef, updatedProject, { merge: true });
+    };
+
     const handleSavePhase = async (phaseName: string, data: any) => {
         if (!project) return;
         const projectRef = doc(db, 'projects', project.id);
@@ -3822,8 +3811,8 @@ const ProjectManager = () => {
             case 'estimates': return <PhaseEstimates project={project} onSave={(data) => handleSavePhase('estimates', data)} />;
             case 'strategic-planner': return <PhaseReleasePlanner project={project} onSave={(data) => handleSavePhase('strategicPlanner', data)} />;
             case 'roadmap': return <PhaseRoadmap project={project} onSave={(data) => handleSavePhase('roadmap', data)} />;
-            case 'sprint': return <PhaseSprint project={project} onSave={(data) => handleSavePhase('sprint', data)} />;
-            case 'stats': return <PhaseStats />;
+            case 'sprint': return <SprintCenter project={project} onUpdateProject={handleUpdateProject} />;
+            case 'stats': return <ExecutiveObeya project={project} />;
             case 'obeya': return <PhaseObeya project={project} onSave={(data) => handleSavePhase('obeya', data)} />;
             default: return <div>Phase not implemented in this demo</div>;
         }

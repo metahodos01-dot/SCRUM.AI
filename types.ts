@@ -95,12 +95,13 @@ export interface UserStory {
   acceptanceCriteria: string[];
   storyPoints: number;
   estimatedHours: number;
-  status: 'todo' | 'doing' | 'done';
+  status: 'todo' | 'doing' | 'testing' | 'done'; // Added 'testing'
   assigneeIds?: string[];
   isInSprint?: boolean;
   completedAt?: number; // Timestamp for Burndown calculation
   priority: number;                // DEEP: priority order within epic
   detailLevel: 'high' | 'medium' | 'low';  // DEEP: high = sprint-ready, low = future
+  businessValue?: number;          // Added: Business Value Score (1-100)
 }
 
 export interface Impediment {
@@ -126,6 +127,14 @@ export interface SprintData {
   review?: string;
   retrospective?: string;
   dailyStandups?: { dayIndex: number; remainingHours: number; timestamp: number }[];
+
+  // Sprint Center additions
+  burndownHistory?: BurndownSnapshot[];
+  aiAlerts?: SprintAiAlert[];
+  totalCapacity?: number;     // Total adjustable hours for the sprint
+  totalEstimatedHours?: number; // Sum of story estimates at start
+  businessValueTotal?: number;  // Sum of business value
+  status?: 'planning' | 'active' | 'review' | 'completed';
 }
 
 // Deprecated separate interface in favor of nested SprintData
@@ -138,6 +147,22 @@ export interface Sprint {
   endDate: string;
   goal: string;
   tasks: Task[];
+}
+
+export interface BurndownSnapshot {
+  date: string;
+  remainingHours: number;
+  idealHours: number;
+  completedStoryPoints: number;
+}
+
+export interface SprintAiAlert {
+  id: string;
+  type: 'bottleneck' | 'capacity' | 'risk';
+  message: string;
+  detectedAt: number;
+  relatedEntityId?: string; // Story ID or Member ID
+  severity: 'low' | 'medium' | 'high';
 }
 
 export interface Task {
