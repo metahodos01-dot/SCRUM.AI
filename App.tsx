@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc, doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, onSnapshot, updateDoc, setDoc, arrayUnion } from 'firebase/firestore';
 import { auth, db } from './firebase';
-import { Project, User, Epic, UserStory, TeamMember, Impediment, Risk } from './types';
+import { Project, User, Epic, UserStory, TeamMember, Impediment, Risk, DailyStandup } from './types';
 import { Layout } from './components/Layout';
 import { aiService } from './services/aiService';
 import { 
@@ -509,10 +509,22 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
     };
 
     const updateStoryStatus = (storyId: string, status: 'todo' | 'doing' | 'done') => {
-        const timestamp = status === 'done' ? Date.now() : undefined;
         setLocalEpics(prev => prev.map(epic => ({
             ...epic,
-            stories: epic.stories.map(s => s.id === storyId ? { ...s, status, completedAt: timestamp } : s)
+            stories: epic.stories.map(s => {
+                if (s.id !== storyId) return s;
+                
+                const updatedStory = { ...s, status };
+                
+                if (status === 'done') {
+                    updatedStory.completedAt = Date.now();
+                } else {
+                    // Prevent saving undefined to Firestore which causes crashes
+                    delete updatedStory.completedAt;
+                }
+                
+                return updatedStory;
+            })
         })));
     };
 
@@ -572,9 +584,10 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                 storyPoints: s.storyPoints || 0,
                 estimatedHours: s.estimatedHours || 0,
                 status: 'todo',
-                // IMPORTANT: Inherit sprint status so it appears on board if parent was there
-                isInSprint: story.isInSprint,
-                assigneeIds: story.assigneeIds
+                // IMPORTANT: Inherit sprint status so it appears on board if parent was there.
+                // DEFAULT TO FALSE IF UNDEFINED to avoid Firestore crashes.
+                isInSprint: story.isInSprint || false,
+                assigneeIds: story.assigneeIds || [] // Default to empty array to avoid undefined
             }));
 
             // Replace original story with new ones in the same epic
@@ -620,6 +633,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
             moods: {},
             impediments: [],
             dailyMeetingDuration: dailyDurationMinutes,
+            dailyStandups: [], // Initialize empty
             review: '',
             retrospective: ''
         };
@@ -667,13 +681,14 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
 
     const saveChanges = async () => {
          const projectRef = doc(db, 'projects', project.id);
+         // Guard against undefined values which crash Firestore
          let updatedSprintData: any = { 
-             review: reviewNotes,
-             retrospective: retroNotes,
-             goal: sprintGoal,
-             memberCapacity: memberCapacity,
-             impediments: impediments,
-             dailyMeetingDuration: dailyDurationMinutes
+             review: reviewNotes || "",
+             retrospective: retroNotes || "",
+             goal: sprintGoal || "",
+             memberCapacity: memberCapacity || {},
+             impediments: impediments || [],
+             dailyMeetingDuration: dailyDurationMinutes || 15
          };
 
          // If user edited the end date
@@ -694,6 +709,35 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
          await updateDoc(projectRef, updates);
          setIsEditingEndDate(false);
          alert("Sprint data saved!");
+    };
+
+    // --- Daily Standup Logic ---
+    const handleSaveDaily = async () => {
+        if (!project.phases.sprint?.isActive) return;
+
+        const stories = getSprintStories();
+        const totalHours = stories.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
+        const doneStories = stories.filter(s => s.status === 'done');
+        const doneHours = doneStories.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
+        const remainingHours = Math.max(0, totalHours - doneHours);
+
+        const currentStandups = project.phases.sprint.dailyStandups || [];
+        const dayNumber = currentStandups.length + 1;
+        
+        const newDaily: DailyStandup = {
+            day: dayNumber,
+            date: new Date().toISOString(),
+            oreCompletate: doneHours - (currentStandups.length > 0 ? (totalHours - currentStandups[currentStandups.length - 1].oreRimanenti) : 0), // Delta from last recorded state
+            oreRimanenti: remainingHours,
+            taskCompletati: doneStories.map(s => s.id)
+        };
+
+        const projectRef = doc(db, 'projects', project.id);
+        await updateDoc(projectRef, {
+            "phases.sprint.dailyStandups": arrayUnion(newDaily)
+        });
+        
+        alert(`Daily Standup Day ${dayNumber} Saved! Remaining: ${remainingHours}h`);
     };
 
     // --- Sub-components for Sprint ---
@@ -739,22 +783,41 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                     />
                     <span className="text-[10px] text-gray-400">min</span>
                 </div>
+                
+                <button 
+                    onClick={handleSaveDaily}
+                    className="mt-4 w-full bg-accent text-white px-3 py-2 rounded font-bold text-xs shadow-md hover:bg-opacity-90"
+                >
+                    💾 End Daily & Save Progress
+                </button>
             </div>
         )
     }
 
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
-            const actual = payload.find((p: any) => p.dataKey === 'actual');
-            const ideal = payload.find((p: any) => p.dataKey === 'ideal');
-            const diff = actual?.value - ideal?.value;
+            const actualData = payload.find((p: any) => p.dataKey === 'actual');
+            const idealData = payload.find((p: any) => p.dataKey === 'ideal');
+            
+            // If actual is null (future day), don't show specific diff
+            if (!actualData || actualData.value === null) {
+                 return (
+                    <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-xl text-xs">
+                        <p className="font-bold text-gray-700 mb-2">Day {label}</p>
+                        <p className="text-gray-400">Ideal: {idealData?.value?.toFixed(1)}h</p>
+                        <p className="text-gray-400 italic">Not yet reached</p>
+                    </div>
+                );
+            }
+
+            const diff = actualData.value - idealData.value;
             const diffFormatted = diff ? Math.abs(diff).toFixed(1) : '0';
 
             return (
                 <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-xl text-xs">
                     <p className="font-bold text-gray-700 mb-2">Day {label}</p>
-                    <p className="text-[#F87171] font-bold">Actual: {actual?.value}h</p>
-                    <p className="text-gray-400">Ideal: {ideal?.value.toFixed(1)}h</p>
+                    <p className="text-[#EF4444] font-bold">Actual: {actualData.value}h</p>
+                    <p className="text-gray-400">Ideal: {idealData?.value?.toFixed(1)}h</p>
                     {diff !== undefined && (
                         <div className={`mt-2 pt-2 border-t font-bold ${diff > 0 ? 'text-red-500' : 'text-green-600'}`}>
                             {diff > 0 ? `+${diffFormatted}h (Behind)` : `-${diffFormatted}h (Ahead)`}
@@ -773,42 +836,45 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
         const totalHours = stories.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
         // Using provided duration in weeks to calculate days. Assuming 7 days a week for simplicity in chart x-axis.
         const sprintDays = duration * 7;
-        const startDate = new Date(project.phases.sprint.startDate).getTime();
-        const now = Date.now();
         
-        const data = [];
+        // --- Ideal Trend Construction (Full Sprint) ---
+        const idealData = Array.from({ length: sprintDays + 1 }, (_, day) => ({
+            day,
+            ideal: Math.max(0, totalHours - (totalHours / sprintDays * day))
+        }));
+
+        // --- Actual Remaining Construction (Historical + Today) ---
+        // Always start with Day 0 = Total Hours
+        const actualData: {day: number, actual: number}[] = [{ day: 0, actual: totalHours }];
         
-        // CRITICAL RULE: Day 0 - Ideal and Actual start at same point
-        data.push({ day: 0, ideal: totalHours, actual: totalHours });
-
-        const idealSlope = totalHours / sprintDays;
-
-        for (let i = 1; i <= sprintDays; i++) {
-            const dayTimestamp = startDate + (i * 24 * 60 * 60 * 1000);
-            
-            // Ideal Logic: Linear drop
-            const ideal = Math.max(0, totalHours - (idealSlope * i));
-
-            // Actual Logic
-            let actual = null;
-            // Only plot 'actual' if the day is in the past or is today (within a reasonable buffer)
-            if (startDate + ((i-1) * 24 * 60 * 60 * 1000) <= now) {
-                 const completedStories = stories.filter(s => 
-                    s.status === 'done' && s.completedAt && s.completedAt <= dayTimestamp
-                );
-                const hoursDone = completedStories.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
-                actual = Math.max(0, totalHours - hoursDone);
+        const standups = project.phases.sprint.dailyStandups || [];
+        
+        standups.forEach(daily => {
+            // Ensure we don't duplicate days if data is weird
+            if (!actualData.find(d => d.day === daily.day)) {
+                actualData.push({
+                    day: daily.day,
+                    actual: daily.oreRimanenti
+                });
             }
+        });
 
-            data.push({ day: i, ideal, actual });
-        }
+        // Merge for Chart
+        const chartData = idealData.map(item => {
+            const actualPoint = actualData.find(a => a.day === item.day);
+            return {
+                day: item.day,
+                ideal: item.ideal,
+                actual: actualPoint ? actualPoint.actual : null // null for future days ensures line stops
+            };
+        });
 
         // Determine sprint status based on latest actual data point
-        const lastPoint = [...data].reverse().find(d => d.actual !== null);
+        const lastPoint = [...chartData].reverse().find(d => d.actual !== null);
         let diff = 0;
         let status = 'ontrack'; // ahead, behind, ontrack
-        if (lastPoint) {
-            diff = lastPoint.actual - lastPoint.ideal;
+        if (lastPoint && lastPoint.ideal !== undefined) {
+            diff = lastPoint.actual! - lastPoint.ideal;
             if (diff < -5) status = 'ahead';
             else if (diff > 5) status = 'behind';
         }
@@ -830,11 +896,11 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                 </div>
                 
                 <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#F87171" stopOpacity={0.2}/>
-                                <stop offset="95%" stopColor="#F87171" stopOpacity={0}/>
+                                <stop offset="5%" stopColor="#EF4444" stopOpacity={0.2}/>
+                                <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
@@ -844,6 +910,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                             tickLine={false} 
                             tick={{fontSize: 12, fill: '#6B7280'}} 
                             label={{ value: 'Days', position: 'insideBottomRight', offset: -5, fontSize: 10, fill: '#9CA3AF' }}
+                            domain={[0, sprintDays]}
                         />
                         <YAxis 
                             axisLine={false} 
@@ -855,7 +922,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                         <Tooltip content={<CustomTooltip />} />
                         <Legend iconType="circle" />
                         
-                        {/* Ideal Trend - Gray Dashed */}
+                        {/* Ideal Trend - Gray Dashed (#9CA3AF) */}
                         <Line 
                             type="linear" 
                             dataKey="ideal" 
@@ -863,19 +930,20 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                             strokeDasharray="5 5" 
                             name="Ideal Trend" 
                             dot={false} 
-                            strokeWidth={2} 
+                            strokeWidth={2}
+                            connectNulls={false}
                         />
                         
-                        {/* Actual Remaining - Red Solid with Area */}
+                        {/* Actual Remaining - Red Solid (#EF4444) with Area */}
                         <Area 
                             type="monotone" 
                             dataKey="actual" 
-                            stroke="#F87171" 
+                            stroke="#EF4444" 
                             fill="url(#colorActual)" 
                             name="Actual Remaining" 
                             strokeWidth={3} 
-                            dot={{ fill: '#F87171', r: 4, strokeWidth: 2, stroke: '#fff' }}
-                            connectNulls={false}
+                            dot={{ fill: '#EF4444', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                            connectNulls={false} // Don't connect if null (future)
                         />
                     </ComposedChart>
                 </ResponsiveContainer>
@@ -1170,7 +1238,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                  
                  {view === 'refinement' && (
                      <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto pb-6">
-                         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                              <div className="flex justify-between items-center mb-6">
                                 <div>
                                     <h3 className="text-2xl font-bold text-sidebar mb-2">Backlog Refinement</h3>
@@ -1278,82 +1346,80 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
     );
 }
 
-const ProjectRoute = () => {
+const ProjectDetail = () => {
     const { projectId, phaseId } = useParams();
     const [project, setProject] = useState<Project | null>(null);
-    const navigate = useNavigate();
 
     useEffect(() => {
         if (!projectId) return;
-        const unsub = onSnapshot(doc(db, "projects", projectId), (d) => {
-            if (d.exists()) setProject({ id: d.id, ...d.data() } as Project);
+        const unsubscribe = onSnapshot(doc(db, "projects", projectId), (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                setProject({ id: docSnapshot.id, ...docSnapshot.data() } as Project);
+            }
         });
-        return () => unsub();
+        return () => unsubscribe();
     }, [projectId]);
 
     const handleSave = async (data: any) => {
         if (!project || !phaseId) return;
-        const projectRef = doc(db, 'projects', project.id);
-        
-        let updates: any = {};
-        // Generic approach for phases that return partial data to merge
-        updates[`phases.${phaseId}`] = { ...project.phases[phaseId as keyof typeof project.phases], ...data };
-        
-        await updateDoc(projectRef, updates);
-    };
-
-    if (!project) return <div className="p-10 text-center">Loading...</div>;
-
-    const renderPhase = () => {
-        switch(phaseId) {
-            case 'mindset': return <PhaseMindset project={project} onSave={handleSave} />;
-            case 'vision': return <PhaseVision project={project} onSave={handleSave} />;
-            case 'objectives': return <PhaseObjectives project={project} onSave={handleSave} />;
-            case 'kpis': return <PhaseKPIs project={project} onSave={handleSave} />;
-            case 'backlog': return <PhaseBacklog project={project} onSave={handleSave} />;
-            case 'team': return <PhaseTeam project={project} onSave={handleSave} />;
-            case 'estimates': return <PhaseEstimates project={project} onSave={handleSave} />;
-            case 'roadmap': return <PhaseRoadmap project={project} onSave={handleSave} />;
-            case 'sprint': return <PhaseSprint project={project} onSave={handleSave} />;
-            default: return <div>Phase not implemented or found: {phaseId}</div>;
+        const projectRef = doc(db, 'projects', projectId);
+        try {
+            await updateDoc(projectRef, {
+                [`phases.${phaseId}`]: data
+            });
+        } catch (e: any) {
+            console.error("Error saving phase:", e);
+            alert(`Error saving: ${e.message}`);
         }
     };
 
+    if (!project) return <div className="flex h-full items-center justify-center">Loading Project...</div>;
+
+    let Component;
+    switch (phaseId) {
+        case 'mindset': Component = PhaseMindset; break;
+        case 'vision': Component = PhaseVision; break;
+        case 'objectives': Component = PhaseObjectives; break;
+        case 'kpis': Component = PhaseKPIs; break;
+        case 'backlog': Component = PhaseBacklog; break;
+        case 'team': Component = PhaseTeam; break;
+        case 'estimates': Component = PhaseEstimates; break;
+        case 'roadmap': Component = PhaseRoadmap; break;
+        case 'sprint': Component = PhaseSprint; break;
+        default: Component = () => <div>Select a phase</div>;
+    }
+
     return (
         <Layout currentProject={project}>
-            {renderPhase()}
+            <Component project={project} onSave={handleSave} />
         </Layout>
     );
 };
 
 const App = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      if (u) {
-        setUser({ uid: u.uid, email: u.email, displayName: u.displayName, role: 'user' });
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (u: any) => {
+            setUser(u);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
 
-  if (loading) return <div className="flex items-center justify-center h-screen bg-bg text-sidebar">Loading Scrum AI...</div>;
+    if (loading) return <div className="flex h-screen items-center justify-center text-sidebar font-bold">Loading Scrum AI...</div>;
 
-  return (
-    <HashRouter>
-      <Routes>
-        <Route path="/login" element={!user ? <Login /> : <Navigate to="/projects" />} />
-        <Route path="/projects" element={user ? <Layout currentProject={null}><ProjectList /></Layout> : <Navigate to="/login" />} />
-        <Route path="/project/:projectId/:phaseId" element={user ? <ProjectRoute /> : <Navigate to="/login" />} />
-        <Route path="/" element={<Navigate to={user ? "/projects" : "/login"} />} />
-      </Routes>
-    </HashRouter>
-  );
+    return (
+        <HashRouter>
+            <Routes>
+                <Route path="/login" element={!user ? <Login /> : <Navigate to="/projects" />} />
+                <Route path="/projects" element={user ? <ProjectList /> : <Navigate to="/login" />} />
+                <Route path="/project/:projectId/:phaseId" element={user ? <ProjectDetail /> : <Navigate to="/login" />} />
+                <Route path="/" element={<Navigate to={user ? "/projects" : "/login"} />} />
+            </Routes>
+        </HashRouter>
+    );
 };
 
 export default App;

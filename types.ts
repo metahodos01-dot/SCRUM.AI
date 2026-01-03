@@ -74,6 +74,14 @@ export interface Impediment {
   status: 'open' | 'resolved';
 }
 
+export interface DailyStandup {
+  day: number;
+  date: string;
+  oreCompletate: number;
+  oreRimanenti: number;
+  taskCompletati: string[]; // IDs of stories completed this day
+}
+
 export interface SprintData {
   isActive: boolean;
   number: number;
@@ -86,6 +94,7 @@ export interface SprintData {
   moods?: Record<string, 'happy' | 'neutral' | 'sad' | 'stressed'>;
   impediments?: Impediment[];
   dailyMeetingDuration?: number; // Minutes, defaults to 15
+  dailyStandups?: DailyStandup[]; // Historic data for burndown
   review?: string;
   retrospective?: string;
 }
