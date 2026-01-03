@@ -61,24 +61,24 @@ const Homepage = () => {
             {/* Hero Section */}
             <section className="min-h-screen flex flex-col items-center justify-center px-8 py-20 text-center">
                 {/* META HODOS Logo */}
-                <div className="flex flex-col items-center gap-2 mb-12">
-                    <div className="flex gap-1.5">
-                        <span className="w-3 h-3 rounded-full bg-accent"></span>
-                        <span className="w-3 h-3 rounded-full bg-btn-primary"></span>
-                        <span className="w-3 h-3 rounded-full bg-badge"></span>
+                <div className="flex flex-col items-center gap-4 mb-16">
+                    <div className="flex gap-3">
+                        <span className="w-5 h-5 rounded-full bg-accent"></span>
+                        <span className="w-5 h-5 rounded-full bg-btn-primary"></span>
+                        <span className="w-5 h-5 rounded-full bg-badge"></span>
                     </div>
-                    <div className="text-center mt-2">
-                        <p className="text-lg font-light tracking-[0.2em] text-sidebar">METÀ</p>
-                        <p className="text-lg font-bold tracking-[0.2em] text-sidebar">HODÓS</p>
+                    <div className="text-center mt-3">
+                        <p className="text-3xl font-light tracking-[0.3em] text-sidebar">METÀ</p>
+                        <p className="text-3xl font-bold tracking-[0.3em] text-sidebar">HODÓS</p>
                     </div>
-                    <p className="text-[9px] text-text-secondary uppercase tracking-[0.25em] mt-1">
+                    <p className="text-[11px] text-text-secondary uppercase tracking-[0.35em] mt-2">
                         Persone • Agilità • Risultati
                     </p>
                 </div>
 
                 {/* Main Title */}
-                <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-sidebar mb-6 tracking-tight">
-                    Scrum.AI
+                <h1 className="text-7xl md:text-8xl lg:text-9xl font-extrabold text-sidebar mb-6 tracking-tight">
+                    SCRUM.AI
                 </h1>
 
                 {/* Subtitle */}
@@ -115,9 +115,8 @@ const Homepage = () => {
                             <p className="text-[10px] font-bold text-badge uppercase tracking-[0.3em] mb-8">
                                 LA NOSTRA VISIONE
                             </p>
-                            <h2 className="text-4xl md:text-5xl font-extrabold text-white leading-tight mb-6">
-                                Rendere l'eccellenza strategica <span className="text-badge">semplice</span>,<br />
-                                umana e immediata.
+                            <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6">
+                                Rendere l'eccellenza strategica <span className="text-badge">semplice</span>, umana e immediata.
                             </h2>
                             <p className="text-gray-400 text-base leading-relaxed">
                                 Trasformiamo la complessità in risultati pratici stando<br />
@@ -167,27 +166,12 @@ const Homepage = () => {
                     </div>
                 </div>
 
-                {/* META HODOS Logo - Right side */}
-                <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden xl:flex flex-col items-center gap-2">
-                    <div className="flex gap-1">
-                        <span className="w-2 h-2 rounded-full bg-accent"></span>
-                        <span className="w-2 h-2 rounded-full bg-btn-primary"></span>
-                        <span className="w-2 h-2 rounded-full bg-badge"></span>
-                    </div>
-                    <p className="text-xs font-light tracking-[0.15em] text-gray-400">METÀ</p>
-                    <p className="text-xs font-bold tracking-[0.15em] text-white">HODÓS</p>
-                </div>
             </section>
 
             {/* Training Path Section - Light Background */}
             <section className="py-24 px-8 bg-white">
                 <div className="max-w-[1200px] mx-auto">
-                    {/* Section Header */}
-                    <div className="text-center mb-16">
-                        <p className="text-[10px] font-bold text-accent uppercase tracking-[0.3em]">
-                            AGILE MINDSET
-                        </p>
-                    </div>
+
 
                     {/* 3 Cards */}
                     <div className="grid md:grid-cols-3 gap-8">
