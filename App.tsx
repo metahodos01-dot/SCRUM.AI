@@ -747,18 +747,21 @@ const PhaseVision = ({ project, onSave }: { project: Project, onSave: (data: any
         try {
             const prompt = `
                 Analizza i rischi per questo prodotto.
+                Nome Prodotto: ${inputs.productName}
                 Vision: ${generatedVision}
                 Target: ${inputs.target}
                 Problema: ${inputs.problem}
+                Funzionamento: ${inputs.functionality}
                 Vincoli: ${inputs.constraints}
                 
                 Genera un JSON array di 4-6 rischi principali in italiano.
                 Per ogni rischio indica: impatto (Alto/Medio/Basso), categoria (Mercato/Tecnico/Risorse/Legale), e strategia di mitigazione.
                 
+                Rispondi SOLO con un JSON array valido, senza markdown:
                 [{ "rischio": "descrizione", "impatto": "Alto", "categoria": "Mercato", "mitigazione": "strategia" }]
             `;
 
-            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' + (import.meta as any).env.VITE_API_KEY, {
+            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + (import.meta as any).env.VITE_API_KEY, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -767,11 +770,13 @@ const PhaseVision = ({ project, onSave }: { project: Project, onSave: (data: any
                 })
             });
             const data = await response.json();
+            console.log('Risk API Response:', data);
             const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-            setRisks(JSON.parse(text));
+            const parsedRisks = JSON.parse(text);
+            setRisks(parsedRisks);
         } catch (e) {
-            console.error(e);
-            alert("AI Error");
+            console.error('Risk Analysis Error:', e);
+            alert("Errore nell'analisi rischi. Controlla la console per dettagli.");
         }
         setLoadingRisks(false);
     };
@@ -997,55 +1002,217 @@ const PhaseVision = ({ project, onSave }: { project: Project, onSave: (data: any
 
 const PhaseObjectives = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     const [deadline, setDeadline] = useState(project.phases.objectives?.deadline || '');
-    const [generatedObjectives, setGeneratedObjectives] = useState(project.phases.objectives?.text || '');
+    const [objectives, setObjectives] = useState<any[]>(project.phases.objectives?.objectives || []);
     const [loading, setLoading] = useState(false);
+    const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
 
     const handleGenerate = async () => {
         if (!project.phases.vision?.text) {
-            alert("Please complete Product Vision first.");
+            alert("Prima completa la Product Vision!");
             return;
         }
         setLoading(true);
         try {
-            const text = await aiService.generateObjectives(project.phases.vision.text, deadline);
-            setGeneratedObjectives(text);
-        } catch (e) { alert("AI Error"); }
+            const result = await aiService.generateObjectives(project.phases.vision.text, deadline);
+            setObjectives(result);
+        } catch (e) {
+            console.error(e);
+            alert("AI Error");
+        }
         setLoading(false);
     };
 
+    const addObjective = () => {
+        setObjectives([...objectives, {
+            title: 'Nuovo Obiettivo',
+            description: '',
+            specific: '',
+            measurable: '',
+            achievable: '',
+            relevant: '',
+            timeBound: deadline
+        }]);
+    };
+
+    const deleteObjective = (idx: number) => {
+        setObjectives(objectives.filter((_, i) => i !== idx));
+    };
+
+    const updateObjective = (idx: number, field: string, value: string) => {
+        const updated = [...objectives];
+        updated[idx][field] = value;
+        setObjectives(updated);
+    };
+
+    // Convert objectives to text for KPIs generation (backwards compatibility)
+    const objectivesAsText = objectives.map(o => `<b>${o.title}</b>: ${o.description}`).join('<br/>');
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 h-[calc(100vh-140px)] overflow-y-auto pr-2">
             <h2 className="text-3xl font-extrabold text-sidebar">3. STRATEGIC OBJECTIVES</h2>
-            <div className="grid grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-4">
-                    <h3 className="font-bold text-gray-700">Settings</h3>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Target Date / Deadline</label>
-                        <input
-                            type="date"
-                            className="w-full border p-3 rounded-xl text-gray-800 bg-white"
-                            value={deadline}
-                            onChange={e => setDeadline(e.target.value)}
-                        />
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-xl">
-                        <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Based on Vision</h4>
-                        <div className="text-sm text-gray-600 line-clamp-4" dangerouslySetInnerHTML={{ __html: project.phases.vision?.text || 'No vision found.' }} />
-                    </div>
-                    <button onClick={handleGenerate} disabled={loading || !deadline} className="w-full bg-sidebar text-white py-3 rounded-xl font-bold disabled:opacity-50">
-                        {loading ? 'Generating...' : '✨ Generate Objectives'}
+
+            {/* Vision Summary - Enlarged */}
+            <div className="bg-gradient-to-r from-sidebar to-gray-800 rounded-2xl p-6 text-white">
+                <div className="flex justify-between items-start mb-4">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                        <span className="text-xl">🎯</span> Vision Statement di Riferimento
+                    </h3>
+                    <span className="text-xs bg-white/20 px-3 py-1 rounded-full">Fase 2</span>
+                </div>
+                <div
+                    className="prose prose-invert prose-sm max-w-none max-h-[200px] overflow-y-auto custom-scrollbar
+                        prose-headings:text-white prose-p:text-gray-200 prose-strong:text-accent"
+                    dangerouslySetInnerHTML={{ __html: project.phases.vision?.text || '<p class="text-gray-400 italic">Nessuna vision trovata. Completa la Fase 2.</p>' }}
+                />
+            </div>
+
+            {/* Settings Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">📅 Deadline Progetto</label>
+                    <input
+                        type="date"
+                        className="w-full border border-gray-200 p-3 rounded-xl text-gray-800 bg-gray-50 focus:ring-2 focus:ring-accent"
+                        value={deadline}
+                        onChange={e => setDeadline(e.target.value)}
+                    />
+                </div>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center">
+                    <button
+                        onClick={handleGenerate}
+                        disabled={loading || !deadline}
+                        className="bg-gradient-to-r from-sidebar to-gray-700 text-white px-6 py-3 rounded-xl font-bold disabled:opacity-50 hover:shadow-lg transition-all"
+                    >
+                        {loading ? '⏳ Generazione...' : '✨ Genera Obiettivi con AI'}
                     </button>
                 </div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-                    <h3 className="font-bold text-gray-700 mb-2">SMART Objectives (Editable)</h3>
-                    {/* Changed to Textarea for easy editing */}
-                    <textarea
-                        className="flex-1 border rounded-xl p-4 bg-gray-50 text-gray-800 min-h-[300px] font-sans"
-                        value={generatedObjectives}
-                        onChange={e => setGeneratedObjectives(e.target.value)}
-                    />
-                    <button onClick={() => onSave({ text: generatedObjectives, deadline })} className="mt-4 bg-accent text-white py-3 rounded-xl font-bold">Save & Continue</button>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center justify-center">
+                    <button
+                        onClick={addObjective}
+                        className="bg-green-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-600 transition-all flex items-center gap-2"
+                    >
+                        <span className="text-xl">+</span> Aggiungi Obiettivo
+                    </button>
                 </div>
+            </div>
+
+            {/* Objectives List */}
+            <div className="space-y-4">
+                {objectives.length === 0 ? (
+                    <div className="bg-gray-50 rounded-2xl p-8 text-center border-2 border-dashed border-gray-200">
+                        <div className="text-5xl mb-4">🎯</div>
+                        <p className="text-gray-500">Nessun obiettivo definito. Genera con AI o aggiungine uno manualmente.</p>
+                    </div>
+                ) : (
+                    objectives.map((obj, idx) => (
+                        <div key={idx} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                            {/* Header */}
+                            <div
+                                className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition"
+                                onClick={() => setExpandedIdx(expandedIdx === idx ? null : idx)}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center font-bold text-sm">
+                                        {idx + 1}
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={obj.title}
+                                        onChange={e => updateObjective(idx, 'title', e.target.value)}
+                                        onClick={e => e.stopPropagation()}
+                                        className="text-lg font-bold text-sidebar bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-accent rounded px-2"
+                                        placeholder="Titolo Obiettivo"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); deleteObjective(idx); }}
+                                        className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition"
+                                        title="Elimina"
+                                    >
+                                        🗑️
+                                    </button>
+                                    <span className="text-gray-400 text-xl">
+                                        {expandedIdx === idx ? '▲' : '▼'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Expanded Content */}
+                            {expandedIdx === idx && (
+                                <div className="p-4 pt-0 border-t border-gray-100 space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descrizione</label>
+                                        <textarea
+                                            value={obj.description}
+                                            onChange={e => updateObjective(idx, 'description', e.target.value)}
+                                            className="w-full border border-gray-200 p-3 rounded-xl bg-gray-50 min-h-[80px] resize-y"
+                                            placeholder="Descrizione dettagliata dell'obiettivo..."
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                            <label className="block text-xs font-bold text-blue-700 uppercase mb-1">🎯 Specific (Cosa)</label>
+                                            <textarea
+                                                value={obj.specific}
+                                                onChange={e => updateObjective(idx, 'specific', e.target.value)}
+                                                className="w-full bg-white border border-blue-200 p-2 rounded-lg text-sm min-h-[60px] resize-y"
+                                                placeholder="Cosa vuoi raggiungere?"
+                                            />
+                                        </div>
+                                        <div className="bg-green-50 p-3 rounded-xl border border-green-100">
+                                            <label className="block text-xs font-bold text-green-700 uppercase mb-1">📏 Measurable (Come)</label>
+                                            <textarea
+                                                value={obj.measurable}
+                                                onChange={e => updateObjective(idx, 'measurable', e.target.value)}
+                                                className="w-full bg-white border border-green-200 p-2 rounded-lg text-sm min-h-[60px] resize-y"
+                                                placeholder="Come misurerai il successo?"
+                                            />
+                                        </div>
+                                        <div className="bg-yellow-50 p-3 rounded-xl border border-yellow-100">
+                                            <label className="block text-xs font-bold text-yellow-700 uppercase mb-1">✅ Achievable (Perché)</label>
+                                            <textarea
+                                                value={obj.achievable}
+                                                onChange={e => updateObjective(idx, 'achievable', e.target.value)}
+                                                className="w-full bg-white border border-yellow-200 p-2 rounded-lg text-sm min-h-[60px] resize-y"
+                                                placeholder="Perché è raggiungibile?"
+                                            />
+                                        </div>
+                                        <div className="bg-purple-50 p-3 rounded-xl border border-purple-100">
+                                            <label className="block text-xs font-bold text-purple-700 uppercase mb-1">💡 Relevant (Importanza)</label>
+                                            <textarea
+                                                value={obj.relevant}
+                                                onChange={e => updateObjective(idx, 'relevant', e.target.value)}
+                                                className="w-full bg-white border border-purple-200 p-2 rounded-lg text-sm min-h-[60px] resize-y"
+                                                placeholder="Perché è importante?"
+                                            />
+                                        </div>
+                                        <div className="bg-red-50 p-3 rounded-xl border border-red-100">
+                                            <label className="block text-xs font-bold text-red-700 uppercase mb-1">⏰ Time-Bound (Quando)</label>
+                                            <textarea
+                                                value={obj.timeBound}
+                                                onChange={e => updateObjective(idx, 'timeBound', e.target.value)}
+                                                className="w-full bg-white border border-red-200 p-2 rounded-lg text-sm min-h-[60px] resize-y"
+                                                placeholder="Entro quando?"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Save Button */}
+            <div className="sticky bottom-0 bg-gradient-to-t from-bg to-transparent pt-4 pb-2">
+                <button
+                    onClick={() => onSave({ objectives, deadline, text: objectivesAsText })}
+                    className="w-full bg-accent text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all"
+                >
+                    💾 Salva Obiettivi e Continua
+                </button>
             </div>
         </div>
     );

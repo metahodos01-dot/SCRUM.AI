@@ -8,7 +8,7 @@ const getApiKey = () => {
     // Vercel/Vite requires VITE_ prefix for client-side env vars
     return import.meta.env.VITE_API_KEY || import.meta.env.API_KEY;
   }
-  
+
   try {
     if (process.env.API_KEY) return process.env.API_KEY;
   } catch (e) {
@@ -28,16 +28,19 @@ export const aiService = {
   async generateVision(inputs: any) {
     const prompt = `
       Act as a Senior Product Owner. Create a Product Vision for a product with:
-      Name: ${inputs.name}
+      Product Name: ${inputs.productName || inputs.name}
+      How it works: ${inputs.functionality}
       Target: ${inputs.target}
       Problem: ${inputs.problem}
       Current Solution: ${inputs.currentSolution}
       Differentiation: ${inputs.differentiation}
+      Constraints: ${inputs.constraints}
 
       Output ONLY valid HTML content (no markdown code blocks, no <html> tags, just the inner content).
-      Use <h3> for the Vision Statement, and <p> for the detailed explanation. Use <strong> for emphasis.
+      Start with the Product Name as <h3> for the Vision Statement, and <p> for the detailed explanation. Use <strong> for emphasis.
+      Make sure to prominently feature the product name "${inputs.productName || inputs.name}" in the vision.
     `;
-    
+
     const response = await ai.models.generateContent({
       model: MODEL_TEXT,
       contents: prompt,
@@ -50,14 +53,18 @@ export const aiService = {
       Based on this vision: "${visionText}"
       And deadline: ${deadline}
       
-      Generate 3-5 SMART Objectives.
-      Output ONLY valid HTML <ul> list with <li> items. Use <b> for the objective title.
+      Generate 3-5 SMART Objectives in Italian.
+      Each objective should have: title, description, specific (cosa), measurable (come misurare), achievable (perché raggiungibile), relevant (perché importante), timeBound (quando).
+      
+      Output ONLY a valid JSON array:
+      [{ "title": "Obiettivo 1", "description": "Descrizione dettagliata", "specific": "...", "measurable": "...", "achievable": "...", "relevant": "...", "timeBound": "..." }]
     `;
     const response = await ai.models.generateContent({
       model: MODEL_TEXT,
       contents: prompt,
+      config: { responseMimeType: 'application/json' }
     });
-    return response.text;
+    return JSON.parse(response.text || '[]');
   },
 
   async generateKPIs(objectivesHtml: string) {
@@ -68,7 +75,7 @@ export const aiService = {
       Format: [{ "kpi": "Name", "target": "Value", "metric": "Unit", "frequency": "Monthly" }]
       Output ONLY valid JSON.
     `;
-    
+
     const response = await ai.models.generateContent({
       model: MODEL_TEXT,
       contents: prompt,
@@ -78,7 +85,7 @@ export const aiService = {
   },
 
   async generateBacklog(vision: string, objectives: string) {
-     const prompt = `
+    const prompt = `
       Act as a Product Owner. Create a Backlog based on Vision: ${vision} and Objectives: ${objectives}.
       Generate exactly 5 Epics. For each Epic, generate 3 User Stories.
       
@@ -105,7 +112,7 @@ export const aiService = {
   },
 
   async generateEstimates(stories: any[]) {
-     const prompt = `
+    const prompt = `
       Estimate Story Points (Fibonacci) and Hours for these stories.
       Input: ${JSON.stringify(stories.map(s => s.title))}
       
@@ -137,8 +144,8 @@ export const aiService = {
 
   async generateRoadmap(vision: string, epics: any[]) {
     // Extract titles for context
-    const allStories = epics.flatMap((e:any) => e.stories.map((s:any) => s.title));
-    
+    const allStories = epics.flatMap((e: any) => e.stories.map((s: any) => s.title));
+
     const prompt = `
       Act as a Product Manager. Create a release roadmap for the product.
       Vision: ${vision}
