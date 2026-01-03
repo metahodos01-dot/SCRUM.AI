@@ -2522,42 +2522,30 @@ const PhaseReleasePlanner = ({ project, onSave }: { project: Project, onSave: (d
     const [showSimulation, setShowSimulation] = useState(false);
 
     useEffect(() => {
-        console.log("PhaseReleasePlanner useEffect: project.phases.strategicPlanner changed", project.phases.strategicPlanner);
         if (project.phases.strategicPlanner) {
-            console.log("Updating local plan from props:", project.phases.strategicPlanner);
             setPlan(project.phases.strategicPlanner);
             setMonteCarlo(project.phases.strategicPlanner.monteCarlo);
-        } else {
-            console.log("project.phases.strategicPlanner is falsy/undefined");
         }
     }, [project.phases.strategicPlanner]);
 
     const handleGeneratePlan = async () => {
-        console.log("handleGeneratePlan started");
         setLoading(true);
         try {
             const backlog = project.phases.backlog?.epics || [];
             const team = project.phases.team?.members || [];
             const vision = project.phases.vision?.text || '';
 
-            console.log("Backlog count:", backlog.length);
-            console.log("Team count:", team.length);
-            console.log("Vision length:", vision.length);
-
             if (backlog.length === 0 || team.length === 0) {
-                console.warn("Backlog or Team is empty");
                 alert("Please ensure Backlog and Team phases are completed first.");
                 setLoading(false);
                 return;
             }
 
-            console.log("Calling aiService...");
             // Parallel execution for plan and skill gaps
             const [generatedPlan, skillGaps] = await Promise.all([
                 aiService.generateReleasePlan(backlog, team, vision),
                 aiService.analyzeSkillGaps(backlog, team)
             ]);
-            console.log("AI Service returned:", { generatedPlan, skillGaps });
 
             const newPlan: ReleasePlan = {
                 id: `plan-${Date.now()}`,
@@ -2571,11 +2559,9 @@ const PhaseReleasePlanner = ({ project, onSave }: { project: Project, onSave: (d
 
             setPlan(newPlan);
             onSave(newPlan);
-            // onSave({ strategicPlanner: newPlan });
-            console.log("Plan saved successfully");
 
         } catch (e) {
-            console.error("handleGeneratePlan Error:", e);
+            console.error(e);
             alert("Error generating release plan: " + (e as any).message);
         }
         setLoading(false);
@@ -2604,7 +2590,6 @@ const PhaseReleasePlanner = ({ project, onSave }: { project: Project, onSave: (d
             setPlan(updatedPlan);
             setMonteCarlo(result);
             onSave(updatedPlan);
-            // onSave({ strategicPlanner: updatedPlan });
             setShowSimulation(true);
         } catch (e) {
             console.error(e);
