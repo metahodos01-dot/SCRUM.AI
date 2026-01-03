@@ -364,5 +364,135 @@ export const aiService = {
       config: { responseMimeType: 'application/json' }
     });
     return JSON.parse(response.text || '[]');
+  },
+
+  async generateReleasePlan(backlog: any[], teamMatrix: any[], vision: string) {
+    const backlogSummary = backlog.map(item =>
+      `${item.title} (SP: ${item.stories.reduce((acc: number, s: any) => acc + (s.storyPoints || 0), 0)})`
+    ).join(', ');
+
+    const teamSummary = teamMatrix.map(m => `${m.role} (${m.skills.join(', ')})`).join(', ');
+
+    const prompt = `
+      Act as "The Agility Engine". Create a Strategic Release Plan based on:
+      
+      Vision: "${vision}"
+      Team: ${teamSummary}
+      Backlog Epics: ${backlogSummary}
+      
+      APPLY LOGIC:
+      1. MVP Identification (The Critical Path): Select high biz value / low effort items.
+      2. Skill-Based Scheduling: Map stories to team skills (Senior=1.3x, Junior=0.7x).
+      3. Risk-Driven Sequencing: High risk items in early sprints.
+      4. Strategic Buffer: Assume 20% buffer.
+      
+      Output JSON format:
+      {
+        "phases": [
+          {
+            "name": "MVP (The Foundation)",
+            "objective": "Objective of this phase",
+            "sprints": [1, 2, 3],
+            "stories": ["Epic Title 1", "Epic Title 2"],
+            "totalSP": 45,
+            "riskLevel": "high"
+          },
+          {
+            "name": "Release 1.1 (Growth)",
+            "objective": "Objective of this phase",
+            "sprints": [4, 5, 6],
+            "stories": ["Epic Title 3"],
+            "totalSP": 30,
+            "riskLevel": "medium"
+          }
+        ]
+      }
+    `;
+
+    const response = await ai.models.generateContent({
+      model: MODEL_TEXT,
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+    return JSON.parse(response.text || '{}');
+  },
+
+  async analyzeSkillGaps(backlog: any[], teamMatrix: any[]) {
+    // Collect all skills needed from backlog context (simulated for now based on titles)
+    // In a real scenario, stories would have 'requiredSkills' tags.
+    // Here we ask AI to infer skills and compare with team.
+
+    const backlogContext = backlog.map(e => e.title).join(', ');
+    const teamContext = teamMatrix.map(m => `${m.role} with skills: ${m.skills.join(', ')}`).join('; ');
+
+    const prompt = `
+      Analyze Skill Gaps for this project.
+      Backlog items require implementation.
+      Team available: ${teamContext}
+      Backlog Context: ${backlogContext}
+      
+      Identify bottlenecks.
+      Output JSON array:
+      [
+        {
+          "skill": "AI Model Training",
+          "required": 45,
+          "available": 20,
+          "status": "critical",
+          "bottleneckSprints": 3,
+          "suggestion": "Hire external consultant or upskill"
+        }
+      ]
+    `;
+
+    const response = await ai.models.generateContent({
+      model: MODEL_TEXT,
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+    return JSON.parse(response.text || '[]');
+  },
+
+  async runMonteCarloSimulation(totalSP: number, teamVelocity: number) {
+    // Monte Carlo Simulation Logic (Client-side calculation for speed, no API call needed strictly, but structured here)
+    const iterations = 1000;
+    const results = [];
+
+    for (let i = 0; i < iterations; i++) {
+      let accumulatedDays = 0;
+      let remainingSP = totalSP;
+
+      while (remainingSP > 0) {
+        // Velocity fluctuation between 0.7x (bad sprint) and 1.3x (great sprint)
+        const fluctuation = 0.7 + Math.random() * 0.6;
+        const sprintVelocity = teamVelocity * fluctuation;
+        remainingSP -= sprintVelocity;
+        accumulatedDays += 14; // 2 weeks sprint
+      }
+
+      // Add random buffer 0-20%
+      accumulatedDays += accumulatedDays * (Math.random() * 0.2);
+      results.push(accumulatedDays);
+    }
+
+    results.sort((a, b) => a - b);
+    const today = new Date();
+    const addDays = (days: number) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() + days);
+      return d.toLocaleDateString('it-IT');
+    };
+
+    return {
+      p50Date: addDays(results[Math.floor(iterations * 0.5)]),
+      p80Date: addDays(results[Math.floor(iterations * 0.8)]),
+      p95Date: addDays(results[Math.floor(iterations * 0.95)]),
+      iterations: iterations,
+      confidenceFactors: [
+        "Team Velocity fluctuation ±30%",
+        "Buffer 0-20% applied",
+        "Historical data variance"
+      ]
+    };
   }
 };

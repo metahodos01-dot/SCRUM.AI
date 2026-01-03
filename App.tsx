@@ -3,7 +3,7 @@ import { HashRouter, Routes, Route, Navigate, useParams, useNavigate } from 'rea
 import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
-import { Project, User, Epic, UserStory, TeamMember, Impediment } from './types';
+import { Project, User, Epic, UserStory, TeamMember, Impediment, ReleasePlan, MonteCarloResult } from './types';
 import { Layout } from './components/Layout';
 import { aiService } from './services/aiService';
 import {
@@ -2160,7 +2160,7 @@ const PhaseTeam = ({ project, onSave }: { project: Project, onSave: (data: any) 
                         <div className="mt-4 space-y-2">
                             {healthPillars.flatMap(p => p.alerts || []).map((alert: any) => (
                                 <div key={alert.id} className={`flex items-center gap-3 p-3 rounded-lg ${alert.severity === 'critical' ? 'bg-red-500/20' :
-                                        alert.severity === 'warning' ? 'bg-yellow-500/20' : 'bg-blue-500/20'
+                                    alert.severity === 'warning' ? 'bg-yellow-500/20' : 'bg-blue-500/20'
                                     }`}>
                                     <span className="text-lg">
                                         {alert.severity === 'critical' ? '🚨' : alert.severity === 'warning' ? '⚠️' : 'ℹ️'}
@@ -2353,8 +2353,8 @@ const PhaseTeam = ({ project, onSave }: { project: Project, onSave: (data: any) 
                                                 key={level}
                                                 onClick={() => updateMember(member.id, 'aiComfortLevel', level)}
                                                 className={`w-10 h-10 rounded-lg font-bold transition ${member.aiComfortLevel >= level
-                                                        ? 'bg-accent text-white'
-                                                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                                    ? 'bg-accent text-white'
+                                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                                                     }`}
                                             >
                                                 {level}
@@ -2512,6 +2512,250 @@ const PhaseEstimates = ({ project, onSave }: { project: Project, onSave: (data: 
         </div>
     )
 }
+
+const PhaseReleasePlanner = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+    const [plan, setPlan] = useState<ReleasePlan | undefined>(project.phases.strategicPlanner);
+    const [loading, setLoading] = useState(false);
+    const [monteCarlo, setMonteCarlo] = useState<MonteCarloResult | undefined>(plan?.monteCarlo);
+    const [showSimulation, setShowSimulation] = useState(false);
+
+    const handleGeneratePlan = async () => {
+        setLoading(true);
+        try {
+            const backlog = project.phases.backlog?.epics || [];
+            const team = project.phases.team?.members || [];
+            const vision = project.phases.vision?.text || '';
+
+            if (backlog.length === 0 || team.length === 0) {
+                alert("Please ensure Backlog and Team phases are completed first.");
+                setLoading(false);
+                return;
+            }
+
+            // Parallel execution for plan and skill gaps
+            const [generatedPlan, skillGaps] = await Promise.all([
+                aiService.generateReleasePlan(backlog, team, vision),
+                aiService.analyzeSkillGaps(backlog, team)
+            ]);
+
+            const newPlan: ReleasePlan = {
+                id: `plan-${Date.now()}`,
+                phases: generatedPlan.phases || [],
+                skillGapAnalysis: skillGaps,
+                monteCarlo: {
+                    p50Date: '-', p80Date: '-', p95Date: '-', iterations: 0, confidenceFactors: []
+                },
+                createdAt: Date.now()
+            };
+
+            setPlan(newPlan);
+            onSave({ strategicPlanner: newPlan });
+
+        } catch (e) {
+            console.error(e);
+            alert("Error generating release plan");
+        }
+        setLoading(false);
+    };
+
+    const runSimulation = async () => {
+        if (!plan) return;
+        setLoading(true);
+        try {
+            // Calculate total project SP
+            const backlog = project.phases.backlog?.epics || [];
+            const totalSP = backlog.reduce((acc, epic) =>
+                acc + epic.stories.reduce((sAcc, s) => sAcc + (s.storyPoints || 0), 0), 0
+            );
+
+            // Estimate average velocity (naive calculation if no historical data)
+            // Assuming 80% availability of total hours / 10 hours per SP (rough conversion)
+            // or just estimate 20 SP per sprint per 3 devs -> 60 SP
+            const team = project.phases.team?.members || [];
+            const devs = team.filter(m => m.role === 'Dev').length || 1;
+            const estimatedVelocity = devs * 15; // 15 SP per dev per sprint assumption
+
+            const result = await aiService.runMonteCarloSimulation(totalSP, estimatedVelocity);
+
+            const updatedPlan = { ...plan, monteCarlo: result };
+            setPlan(updatedPlan);
+            setMonteCarlo(result);
+            onSave({ strategicPlanner: updatedPlan });
+            setShowSimulation(true);
+        } catch (e) {
+            console.error(e);
+            alert("Simulation failed");
+        }
+        setLoading(false);
+    };
+
+    return (
+        <div className="space-y-8 h-[calc(100vh-140px)] overflow-y-auto pr-2">
+            <div className="flex justify-between items-center sticky top-0 bg-white z-10 py-2">
+                <div>
+                    <h2 className="text-3xl font-extrabold text-sidebar">8. STRATEGIC PLANNER</h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                        The Agility Engine: MVP, Skill Matching & Risk-Driven Sequencing
+                    </p>
+                </div>
+                <div className="flex gap-3">
+                    <button
+                        onClick={runSimulation}
+                        disabled={!plan || loading}
+                        className="bg-white border-2 border-accent text-accent px-4 py-2 rounded-xl font-bold text-sm hover:bg-accent hover:text-white transition-all disabled:opacity-50"
+                    >
+                        🎲 Run Monte Carlo
+                    </button>
+                    <button
+                        onClick={handleGeneratePlan}
+                        disabled={loading}
+                        className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-opacity-90 transition-all"
+                    >
+                        {loading ? 'Crunching Data...' : '🚀 Generate Release Plan'}
+                    </button>
+                </div>
+            </div>
+
+            {!plan && (
+                <div className="bg-gray-50 rounded-2xl p-12 text-center border-2 border-dashed border-gray-200">
+                    <div className="text-6xl mb-4">🗺️</div>
+                    <h3 className="text-xl font-bold text-gray-700 mb-2">No Strategic Plan Yet</h3>
+                    <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                        Use "The Agility Engine" to analyze backlog complexity, team skills, and risks to generate an optimal release schedule.
+                    </p>
+                    <button
+                        onClick={handleGeneratePlan}
+                        disabled={loading}
+                        className="bg-accent text-white px-8 py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all"
+                    >
+                        🚀 Launch Agility Engine
+                    </button>
+                </div>
+            )}
+
+            {plan && (
+                <>
+                    {/* Visual Roadmap */}
+                    <div className="relative">
+                        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                        <div className="space-y-8">
+                            {plan.phases.map((phase, index) => (
+                                <div key={index} className="relative pl-16">
+                                    <div className="absolute left-4 top-0 w-8 h-8 bg-sidebar text-white rounded-full flex items-center justify-center font-bold z-10 border-4 border-white">
+                                        {index + 1}
+                                    </div>
+                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                        <div className="bg-sidebar text-white p-4 flex justify-between items-center">
+                                            <div>
+                                                <h3 className="font-bold text-lg uppercase tracking-wider">{phase.name}</h3>
+                                                <p className="text-sm text-gray-300">{phase.objective}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase ${phase.riskLevel === 'high' ? 'bg-red-500 text-white' :
+                                                    phase.riskLevel === 'medium' ? 'bg-yellow-500 text-black' : 'bg-green-500 text-white'
+                                                    }`}>
+                                                    {phase.riskLevel} Risk
+                                                </div>
+                                                <p className="text-xs text-gray-300 mt-1">Sprints {phase.sprints.join('-')} • {phase.totalSP} SP</p>
+                                            </div>
+                                        </div>
+                                        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {phase.stories.map((story, i) => (
+                                                <div key={i} className="bg-gray-50 p-3 rounded-lg border-l-4 border-accent text-sm">
+                                                    <span className="font-bold text-gray-800">{story}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Dashboard Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Skill Gap Analysis */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 className="font-bold text-sidebar uppercase mb-4 flex items-center gap-2">
+                                ⚠️ Skill Gap Analysis
+                            </h3>
+                            <div className="space-y-4">
+                                {plan.skillGapAnalysis?.map((gap, i) => (
+                                    <div key={i} className={`p-4 rounded-xl border ${gap.status === 'critical' ? 'bg-red-50 border-red-100' :
+                                        gap.status === 'attention' ? 'bg-yellow-50 border-yellow-100' : 'bg-green-50 border-green-100'
+                                        }`}>
+                                        <div className="flex justify-between mb-2">
+                                            <span className="font-bold text-gray-800">{gap.skill}</span>
+                                            <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${gap.status === 'critical' ? 'bg-red-200 text-red-800' :
+                                                gap.status === 'attention' ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'
+                                                }`}>{gap.status}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs text-gray-600 mb-2">
+                                            <span>Required: {gap.required} SP</span>
+                                            <span>Available: {gap.available} SP/sprint</span>
+                                        </div>
+                                        {gap.bottleneckSprints > 0 && (
+                                            <p className="text-xs font-bold text-red-600 mb-2">⚡ +{gap.bottleneckSprints} sprints delay predicted</p>
+                                        )}
+                                        <div className="bg-white bg-opacity-50 p-2 rounded text-xs text-gray-700 italic border border-black/5">
+                                            💡 {gap.suggestion}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Monte Carlo Simulation */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 bg-gradient-to-br from-white to-blue-50">
+                            <h3 className="font-bold text-sidebar uppercase mb-4 flex items-center gap-2">
+                                📊 Monte Carlo Delivery Prediction
+                            </h3>
+                            {monteCarlo?.iterations > 0 ? (
+                                <div className="space-y-6">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-24 text-right font-bold text-gray-500">50% Prob.</div>
+                                            <div className="flex-1 bg-gray-200 rounded-full h-8 overflow-hidden relative">
+                                                <div className="absolute top-0 left-0 h-full bg-blue-400 w-1/2"></div>
+                                                <span className="absolute inset-0 flex items-center pl-3 text-sm font-bold text-gray-700">{monteCarlo.p50Date}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-24 text-right font-bold text-gray-500">80% Prob.</div>
+                                            <div className="flex-1 bg-gray-200 rounded-full h-8 overflow-hidden relative">
+                                                <div className="absolute top-0 left-0 h-full bg-blue-600 w-4/5"></div>
+                                                <span className="absolute inset-0 flex items-center pl-3 text-sm font-bold text-white z-10">{monteCarlo.p80Date} ⬅️ Target</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-24 text-right font-bold text-gray-500">95% Prob.</div>
+                                            <div className="flex-1 bg-gray-200 rounded-full h-8 overflow-hidden relative">
+                                                <div className="absolute top-0 left-0 h-full bg-sidebar w-[95%]"></div>
+                                                <span className="absolute inset-0 flex items-center pl-3 text-sm font-bold text-white z-10">{monteCarlo.p95Date}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
+                                        <h4 className="font-bold text-xs uppercase text-blue-800 mb-2">Confidence Factors</h4>
+                                        <ul className="text-xs space-y-1 text-gray-600 list-disc list-inside">
+                                            {monteCarlo.confidenceFactors.map((f, i) => <li key={i}>{f}</li>)}
+                                            <li>Based on {monteCarlo.iterations} simulations</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-10 text-gray-400">
+                                    <div className="text-4xl mb-2">🎲</div>
+                                    <p>Run Monte Carlo simulation to predict delivery dates.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
 
 const PhaseRoadmap = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     const [roadmap, setRoadmap] = useState<any[]>(project.phases.roadmap?.items || []);
@@ -3576,6 +3820,7 @@ const ProjectManager = () => {
             case 'backlog': return <PhaseBacklog project={project} onSave={(data) => handleSavePhase('backlog', data)} />;
             case 'team': return <PhaseTeam project={project} onSave={(data) => handleSavePhase('team', data)} />;
             case 'estimates': return <PhaseEstimates project={project} onSave={(data) => handleSavePhase('estimates', data)} />;
+            case 'strategic-planner': return <PhaseReleasePlanner project={project} onSave={(data) => handleSavePhase('strategicPlanner', data)} />;
             case 'roadmap': return <PhaseRoadmap project={project} onSave={(data) => handleSavePhase('roadmap', data)} />;
             case 'sprint': return <PhaseSprint project={project} onSave={(data) => handleSavePhase('sprint', data)} />;
             case 'stats': return <PhaseStats />;

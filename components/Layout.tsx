@@ -17,10 +17,11 @@ const PHASES = [
   { id: 'backlog', label: '5. Backlog', icon: '📋' },
   { id: 'team', label: '6. Team', icon: '👥' },
   { id: 'estimates', label: '7. Estimates', icon: '🔢' },
-  { id: 'roadmap', label: '8. Roadmap', icon: '🗺️' },
-  { id: 'sprint', label: '9. Sprint', icon: '🏃' },
-  { id: 'stats', label: '10. Statistics', icon: '📈' },
-  { id: 'obeya', label: '11. Obeya Room', icon: '🏛️' },
+  { id: 'strategic-planner', label: '8. Strat. Planner', icon: '🏁' },
+  { id: 'roadmap', label: '9. Roadmap', icon: '🗺️' },
+  { id: 'sprint', label: '10. Sprint', icon: '🏃' },
+  { id: 'stats', label: '11. Statistics', icon: '📈' },
+  { id: 'obeya', label: '12. Obeya Room', icon: '🏛️' },
 ];
 
 export const Layout: React.FC<LayoutProps> = ({ children, currentProject }) => {
@@ -53,8 +54,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentProject }) => {
                     <button
                       onClick={() => navigate(`/project/${currentProject.id}/${phase.id}`)}
                       className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-[12px] transition-all duration-200 ${isActive
-                          ? 'bg-[#3B4252] text-white border-l-[3px] border-accent'
-                          : 'text-gray-300 hover:bg-[#383E4D] hover:text-white'
+                        ? 'bg-[#3B4252] text-white border-l-[3px] border-accent'
+                        : 'text-gray-300 hover:bg-[#383E4D] hover:text-white'
                         }`}
                     >
                       <span className="mr-3">{phase.icon}</span>

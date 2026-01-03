@@ -24,6 +24,7 @@ export interface Project {
     roadmap?: { items: RoadmapItem[] };
     obeya?: { risks: Risk[] };
     sprint?: SprintData;
+    strategicPlanner?: ReleasePlan;
   };
 }
 
@@ -146,4 +147,39 @@ export interface Task {
   status: 'todo' | 'doing' | 'done';
   assigneeId?: string;
   hoursRemaining: number;
+}
+
+// Strategic Release Planner Types
+export interface ReleasePlan {
+  id: string;
+  phases: ReleasePhase[];
+  skillGapAnalysis: SkillGapReport[];
+  monteCarlo: MonteCarloResult;
+  createdAt: number;
+}
+
+export interface ReleasePhase {
+  name: string;
+  objective: string;
+  sprints: number[];
+  stories: string[]; // Story IDs
+  totalSP: number;
+  riskLevel: 'low' | 'medium' | 'high';
+}
+
+export interface SkillGapReport {
+  skill: string;
+  required: number; // SP
+  available: number; // SP per sprint
+  status: 'ok' | 'attention' | 'critical';
+  bottleneckSprints: number;
+  suggestion: string;
+}
+
+export interface MonteCarloResult {
+  p50Date: string;
+  p80Date: string;
+  p95Date: string;
+  iterations: number;
+  confidenceFactors: string[];
 }
