@@ -128,6 +128,406 @@ const ProjectList = () => {
     );
 };
 
+// --- Scrum Framework Interactive Component ---
+
+const ScrumFrameworkInteractive = () => {
+    // XP and Progress State
+    const [xp, setXp] = useState(0);
+    const [showXpGain, setShowXpGain] = useState<{ amount: number; id: number } | null>(null);
+    const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
+    const [showCelebration, setShowCelebration] = useState(false);
+
+    // Role Matching State
+    const [roleMatches, setRoleMatches] = useState<{ [key: string]: string[] }>({
+        'po': [], 'sm': [], 'dev': []
+    });
+    const [roleAnimations, setRoleAnimations] = useState<{ [key: string]: string }>({});
+
+    // Sprint Cycle State
+    const [sprintOrder, setSprintOrder] = useState<string[]>([]);
+    const [sprintAnimations, setSprintAnimations] = useState<{ [key: string]: string }>({});
+
+    // Values Quiz State
+    const [valuesAnswers, setValuesAnswers] = useState<{ [key: number]: string }>({});
+    const [valuesChecked, setValuesChecked] = useState(false);
+
+    // Data
+    const responsibilities = [
+        { id: 'resp1', text: 'Gestisce il Product Backlog', correctRole: 'po' },
+        { id: 'resp2', text: 'Rimuove gli impedimenti', correctRole: 'sm' },
+        { id: 'resp3', text: 'Crea l\'Increment', correctRole: 'dev' },
+        { id: 'resp4', text: 'Massimizza il valore', correctRole: 'po' },
+        { id: 'resp5', text: 'Facilita gli eventi Scrum', correctRole: 'sm' },
+        { id: 'resp6', text: 'È auto-organizzato', correctRole: 'dev' },
+    ];
+
+    const sprintEvents = [
+        { id: 'planning', name: 'Sprint Planning', icon: '📋' },
+        { id: 'daily', name: 'Daily Scrum', icon: '☀️' },
+        { id: 'review', name: 'Sprint Review', icon: '🔍' },
+        { id: 'retro', name: 'Retrospective', icon: '🔄' },
+    ];
+    const correctSprintOrder = ['planning', 'daily', 'review', 'retro'];
+
+    const valuesQuiz = [
+        { id: 0, text: 'Il team si impegna a raggiungere gli obiettivi dello Sprint.', answer: 'Commitment', options: ['Focus', 'Commitment', 'Courage'] },
+        { id: 1, text: 'Tutti nel team sono trasparenti sul proprio lavoro.', answer: 'Openness', options: ['Openness', 'Respect', 'Focus'] },
+        { id: 2, text: 'Il team ha il coraggio di affrontare problemi difficili.', answer: 'Courage', options: ['Commitment', 'Openness', 'Courage'] },
+        { id: 3, text: 'I membri del team rispettano le competenze reciproche.', answer: 'Respect', options: ['Respect', 'Focus', 'Commitment'] },
+    ];
+
+    // Helper: Add XP with animation
+    const addXp = (amount: number) => {
+        setXp(prev => prev + amount);
+        setShowXpGain({ amount, id: Date.now() });
+        setTimeout(() => setShowXpGain(null), 1000);
+    };
+
+    // Helper: Check completion
+    const checkAllComplete = () => {
+        if (completedSections.size === 3) {
+            setShowCelebration(true);
+            setTimeout(() => setShowCelebration(false), 3000);
+        }
+    };
+
+    // Role Matching Logic
+    const handleRoleDrop = (roleId: string, respId: string) => {
+        const resp = responsibilities.find(r => r.id === respId);
+        if (!resp) return;
+
+        // Check if already placed somewhere
+        for (const key of Object.keys(roleMatches)) {
+            if (roleMatches[key].includes(respId)) return;
+        }
+
+        const isCorrect = resp.correctRole === roleId;
+
+        setRoleMatches(prev => ({
+            ...prev,
+            [roleId]: [...prev[roleId], respId]
+        }));
+
+        setRoleAnimations(prev => ({ ...prev, [respId]: isCorrect ? 'animate-pulse-success' : 'animate-shake-error' }));
+        setTimeout(() => setRoleAnimations(prev => ({ ...prev, [respId]: '' })), 600);
+
+        if (isCorrect) {
+            addXp(10);
+        }
+
+        // Check if all placed
+        const totalPlaced = Object.values(roleMatches).flat().length + 1;
+        if (totalPlaced === responsibilities.length) {
+            setCompletedSections(prev => new Set([...prev, 'roles']));
+            addXp(20);
+            setTimeout(checkAllComplete, 500);
+        }
+    };
+
+    // Sprint Cycle Logic
+    const handleSprintDrop = (eventId: string) => {
+        if (sprintOrder.includes(eventId)) return;
+
+        const newOrder = [...sprintOrder, eventId];
+        setSprintOrder(newOrder);
+
+        const expectedIndex = newOrder.length - 1;
+        const isCorrect = correctSprintOrder[expectedIndex] === eventId;
+
+        setSprintAnimations(prev => ({ ...prev, [eventId]: isCorrect ? 'animate-pulse-success' : 'animate-shake-error' }));
+        setTimeout(() => setSprintAnimations(prev => ({ ...prev, [eventId]: '' })), 600);
+
+        if (isCorrect) addXp(15);
+
+        if (newOrder.length === 4) {
+            const allCorrect = newOrder.every((id, i) => correctSprintOrder[i] === id);
+            if (allCorrect) {
+                setCompletedSections(prev => new Set([...prev, 'sprint']));
+                addXp(30);
+                setTimeout(checkAllComplete, 500);
+            }
+        }
+    };
+
+    // Values Quiz Logic
+    const handleValueSelect = (questionId: number, value: string) => {
+        setValuesAnswers(prev => ({ ...prev, [questionId]: value }));
+    };
+
+    const checkValuesQuiz = () => {
+        setValuesChecked(true);
+        let correct = 0;
+        valuesQuiz.forEach(q => {
+            if (valuesAnswers[q.id] === q.answer) correct++;
+        });
+        addXp(correct * 5);
+        if (correct === valuesQuiz.length) {
+            setCompletedSections(prev => new Set([...prev, 'values']));
+            addXp(25);
+            setTimeout(checkAllComplete, 500);
+        }
+    };
+
+    const progress = Math.round((completedSections.size / 3) * 100);
+    const availableResponsibilities = responsibilities.filter(
+        r => !Object.values(roleMatches).flat().includes(r.id)
+    );
+    const availableEvents = sprintEvents.filter(e => !sprintOrder.includes(e.id));
+
+    return (
+        <div className="space-y-6 animate-fade-in relative">
+            {/* Celebration Overlay */}
+            {showCelebration && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 pointer-events-none">
+                    <div className="text-center animate-bounce">
+                        <div className="text-8xl mb-4">🎉</div>
+                        <h2 className="text-4xl font-extrabold text-white">SCRUM MASTER!</h2>
+                        <p className="text-xl text-accent font-bold mt-2">+100 XP Bonus</p>
+                    </div>
+                </div>
+            )}
+
+            {/* XP Float Animation */}
+            {showXpGain && (
+                <div className="fixed top-20 right-10 text-2xl font-bold text-accent animate-float-up z-50">
+                    +{showXpGain.amount} XP
+                </div>
+            )}
+
+            {/* Header with Progress */}
+            <div className="bg-gradient-to-r from-sidebar to-gray-800 rounded-2xl p-6 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full blur-2xl"></div>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h3 className="text-2xl font-extrabold mb-1">🎮 Scrum Framework Challenge</h3>
+                        <p className="text-gray-300 text-sm">Completa le sfide per padroneggiare Scrum!</p>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-3xl font-extrabold text-accent">{xp} XP</div>
+                        <div className="text-xs text-gray-400 uppercase font-bold">Punti Esperienza</div>
+                    </div>
+                </div>
+                {/* Progress Bar */}
+                <div className="mt-4">
+                    <div className="flex justify-between text-xs mb-1">
+                        <span className="text-gray-400">Progresso</span>
+                        <span className="text-accent font-bold">{progress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                        <div
+                            className={`h-full rounded-full transition-all duration-700 ${progress === 100 ? 'bg-green-500 animate-glow' : 'bg-accent'}`}
+                            style={{ width: `${progress}%` }}
+                        ></div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Challenge 1: Role Matching */}
+            <div className={`bg-white rounded-2xl shadow-sm border-2 p-6 transition-all ${completedSections.has('roles') ? 'border-green-400 bg-green-50/30' : 'border-gray-100'}`}>
+                <div className="flex items-center gap-3 mb-4">
+                    <span className="text-2xl">{completedSections.has('roles') ? '✅' : '🎯'}</span>
+                    <h4 className="font-extrabold text-lg text-sidebar">Sfida 1: Chi fa cosa?</h4>
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-bold">+10 XP per match</span>
+                </div>
+                <p className="text-gray-500 text-sm mb-4">Trascina ogni responsabilità sul ruolo corretto.</p>
+
+                {/* Draggable Chips */}
+                <div className="flex flex-wrap gap-2 mb-6 min-h-[50px] p-3 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                    {availableResponsibilities.map(resp => (
+                        <div
+                            key={resp.id}
+                            draggable
+                            onDragStart={e => e.dataTransfer.setData('respId', resp.id)}
+                            className="px-3 py-2 bg-white rounded-lg shadow-sm border border-gray-200 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-accent transition text-sm font-medium text-gray-700"
+                        >
+                            {resp.text}
+                        </div>
+                    ))}
+                    {availableResponsibilities.length === 0 && (
+                        <span className="text-gray-400 text-sm italic">Tutte le responsabilità assegnate! 🎉</span>
+                    )}
+                </div>
+
+                {/* Role Drop Zones */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {[
+                        { id: 'po', icon: '👑', name: 'Product Owner', color: 'indigo' },
+                        { id: 'sm', icon: '🛡️', name: 'Scrum Master', color: 'pink' },
+                        { id: 'dev', icon: '🛠️', name: 'Developers', color: 'green' },
+                    ].map(role => (
+                        <div
+                            key={role.id}
+                            onDragOver={e => e.preventDefault()}
+                            onDrop={e => {
+                                e.preventDefault();
+                                const respId = e.dataTransfer.getData('respId');
+                                handleRoleDrop(role.id, respId);
+                            }}
+                            className={`bg-${role.color}-50 p-4 rounded-xl border-2 border-dashed border-${role.color}-200 min-h-[140px] transition-all hover:border-${role.color}-400`}
+                        >
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="text-2xl">{role.icon}</span>
+                                <span className={`font-bold text-${role.color}-900`}>{role.name}</span>
+                            </div>
+                            <div className="space-y-2">
+                                {roleMatches[role.id].map(respId => {
+                                    const resp = responsibilities.find(r => r.id === respId);
+                                    const isCorrect = resp?.correctRole === role.id;
+                                    return (
+                                        <div
+                                            key={respId}
+                                            className={`px-2 py-1 rounded text-xs font-medium ${roleAnimations[respId] || ''} ${isCorrect ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}`}
+                                        >
+                                            {isCorrect ? '✓' : '✗'} {resp?.text}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Challenge 2: Sprint Cycle Builder */}
+            <div className={`bg-white rounded-2xl shadow-sm border-2 p-6 transition-all ${completedSections.has('sprint') ? 'border-green-400 bg-green-50/30' : 'border-gray-100'}`}>
+                <div className="flex items-center gap-3 mb-4">
+                    <span className="text-2xl">{completedSections.has('sprint') ? '✅' : '🔄'}</span>
+                    <h4 className="font-extrabold text-lg text-sidebar">Sfida 2: Costruisci lo Sprint</h4>
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full font-bold">+15 XP per evento</span>
+                </div>
+                <p className="text-gray-500 text-sm mb-4">Trascina gli eventi nell'ordine corretto per costruire uno Sprint.</p>
+
+                {/* Available Events */}
+                <div className="flex flex-wrap gap-3 mb-6">
+                    {availableEvents.map(event => (
+                        <div
+                            key={event.id}
+                            draggable
+                            onDragStart={e => e.dataTransfer.setData('eventId', event.id)}
+                            className="px-4 py-3 bg-gradient-to-br from-accent/10 to-accent/5 rounded-xl border-2 border-accent/30 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-accent transition flex items-center gap-2"
+                        >
+                            <span className="text-2xl">{event.icon}</span>
+                            <span className="font-bold text-gray-800">{event.name}</span>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Timeline Drop Zone */}
+                <div className="relative">
+                    <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 rounded-full -translate-y-1/2"></div>
+                    <div
+                        className="flex justify-between relative z-10"
+                        onDragOver={e => e.preventDefault()}
+                        onDrop={e => {
+                            e.preventDefault();
+                            const eventId = e.dataTransfer.getData('eventId');
+                            handleSprintDrop(eventId);
+                        }}
+                    >
+                        {[0, 1, 2, 3].map(i => {
+                            const placedEvent = sprintOrder[i] ? sprintEvents.find(e => e.id === sprintOrder[i]) : null;
+                            const isCorrect = sprintOrder[i] === correctSprintOrder[i];
+                            return (
+                                <div
+                                    key={i}
+                                    className={`w-36 h-24 rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${placedEvent
+                                            ? (isCorrect ? 'bg-green-100 border-green-400' : 'bg-red-100 border-red-400')
+                                            : 'bg-gray-50 border-gray-300 hover:border-accent'
+                                        } ${placedEvent ? sprintAnimations[placedEvent.id] || '' : ''}`}
+                                >
+                                    {placedEvent ? (
+                                        <>
+                                            <span className="text-2xl">{placedEvent.icon}</span>
+                                            <span className="text-xs font-bold mt-1">{placedEvent.name}</span>
+                                            <span className="text-xs">{isCorrect ? '✅' : '❌'}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="text-gray-400 text-2xl">?</span>
+                                            <span className="text-xs text-gray-400">Step {i + 1}</span>
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {/* Challenge 3: Values Quiz */}
+            <div className={`bg-white rounded-2xl shadow-sm border-2 p-6 transition-all ${completedSections.has('values') ? 'border-green-400 bg-green-50/30' : 'border-gray-100'}`}>
+                <div className="flex items-center gap-3 mb-4">
+                    <span className="text-2xl">{completedSections.has('values') ? '✅' : '💎'}</span>
+                    <h4 className="font-extrabold text-lg text-sidebar">Sfida 3: I Valori Scrum</h4>
+                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-bold">+5 XP per risposta</span>
+                </div>
+                <p className="text-gray-500 text-sm mb-4">Completa ogni frase scegliendo il valore Scrum corretto.</p>
+
+                <div className="space-y-4">
+                    {valuesQuiz.map(q => {
+                        const isAnswered = valuesAnswers[q.id] !== undefined;
+                        const isCorrect = valuesChecked && valuesAnswers[q.id] === q.answer;
+                        const isWrong = valuesChecked && valuesAnswers[q.id] !== q.answer;
+                        return (
+                            <div
+                                key={q.id}
+                                className={`p-4 rounded-xl border transition-all ${isCorrect ? 'bg-green-50 border-green-300' :
+                                        isWrong ? 'bg-red-50 border-red-300' :
+                                            'bg-gray-50 border-gray-200'
+                                    }`}
+                            >
+                                <p className="text-gray-700 mb-3">
+                                    <span className="font-bold text-accent mr-2">#{q.id + 1}</span>
+                                    {q.text}
+                                </p>
+                                <div className="flex gap-2 flex-wrap">
+                                    {q.options.map(opt => (
+                                        <button
+                                            key={opt}
+                                            onClick={() => !valuesChecked && handleValueSelect(q.id, opt)}
+                                            disabled={valuesChecked}
+                                            className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${valuesAnswers[q.id] === opt
+                                                    ? (valuesChecked
+                                                        ? (opt === q.answer ? 'bg-green-500 text-white' : 'bg-red-500 text-white')
+                                                        : 'bg-accent text-white')
+                                                    : 'bg-white border border-gray-200 text-gray-600 hover:border-accent hover:text-accent'
+                                                } ${valuesChecked ? 'cursor-default' : 'cursor-pointer'}`}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                                {isWrong && (
+                                    <p className="text-xs text-red-600 mt-2">Risposta corretta: <strong>{q.answer}</strong></p>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {!valuesChecked && Object.keys(valuesAnswers).length === valuesQuiz.length && (
+                    <button
+                        onClick={checkValuesQuiz}
+                        className="mt-6 w-full bg-gradient-to-r from-accent to-pink-500 text-white py-3 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all"
+                    >
+                        ✨ Verifica Risposte
+                    </button>
+                )}
+            </div>
+
+            {/* Completion Message */}
+            {progress === 100 && (
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-8 text-white text-center animate-pulse-success">
+                    <div className="text-5xl mb-4">🏆</div>
+                    <h3 className="text-2xl font-extrabold mb-2">Congratulazioni!</h3>
+                    <p className="text-green-100">Hai completato tutte le sfide del Framework Scrum!</p>
+                    <div className="mt-4 text-4xl font-extrabold">{xp} XP Totali</div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 // --- Phases Components ---
 
 const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
@@ -266,68 +666,8 @@ const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: an
                     </div>
                 )}
                 {tab === 'scrum' && (
-                    <div className="space-y-6">
-                        <div className="relative bg-white rounded-2xl shadow-sm p-8 overflow-hidden">
-                            <div className="absolute top-0 left-0 w-2 h-full bg-accent"></div>
-                            <h3 className="text-2xl font-extrabold text-sidebar mb-6">The Scrum Framework</h3>
-
-                            {/* Interactive Roles */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                                <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 hover:shadow-md transition cursor-help group">
-                                    <div className="text-2xl mb-2">👑</div>
-                                    <h4 className="font-bold text-indigo-900">Product Owner</h4>
-                                    <p className="text-xs text-indigo-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Maximizes value, manages Product Backlog.</p>
-                                </div>
-                                <div className="bg-pink-50 p-4 rounded-xl border border-pink-100 hover:shadow-md transition cursor-help group">
-                                    <div className="text-2xl mb-2">🛡️</div>
-                                    <h4 className="font-bold text-pink-900">Scrum Master</h4>
-                                    <p className="text-xs text-pink-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Coaches team, removes impediments, upholds Scrum.</p>
-                                </div>
-                                <div className="bg-green-50 p-4 rounded-xl border border-green-100 hover:shadow-md transition cursor-help group">
-                                    <div className="text-2xl mb-2">🛠️</div>
-                                    <h4 className="font-bold text-green-900">Developers</h4>
-                                    <p className="text-xs text-green-700 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Creates "Done" Increment, self-managing.</p>
-                                </div>
-                            </div>
-
-                            {/* The Sprint Cycle */}
-                            <div className="border-t pt-6">
-                                <h4 className="font-bold text-gray-500 uppercase text-xs mb-4">The Sprint (Heart of Scrum)</h4>
-                                <div className="flex items-center gap-2 overflow-x-auto pb-4">
-                                    <div className="min-w-[120px] bg-white border-2 border-gray-200 p-3 rounded-lg text-center">
-                                        <div className="text-xs font-bold text-gray-400">Step 1</div>
-                                        <div className="font-bold text-sm">Sprint Planning</div>
-                                    </div>
-                                    <div className="text-gray-400">→</div>
-                                    <div className="min-w-[120px] bg-accent/10 border-2 border-accent p-3 rounded-lg text-center">
-                                        <div className="text-xs font-bold text-accent">1-4 Weeks</div>
-                                        <div className="font-bold text-sm">Daily Scrum</div>
-                                    </div>
-                                    <div className="text-gray-400">→</div>
-                                    <div className="min-w-[120px] bg-white border-2 border-gray-200 p-3 rounded-lg text-center">
-                                        <div className="text-xs font-bold text-gray-400">Inspect Product</div>
-                                        <div className="font-bold text-sm">Sprint Review</div>
-                                    </div>
-                                    <div className="text-gray-400">→</div>
-                                    <div className="min-w-[120px] bg-white border-2 border-gray-200 p-3 rounded-lg text-center">
-                                        <div className="text-xs font-bold text-gray-400">Inspect Process</div>
-                                        <div className="font-bold text-sm">Retrospective</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Values */}
-                            <div className="mt-6 flex flex-wrap gap-2">
-                                {['Commitment', 'Focus', 'Openness', 'Respect', 'Courage'].map(v => (
-                                    <span key={v} className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold border border-gray-200">
-                                        {v}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )
-                }
+                    <ScrumFrameworkInteractive />
+                )}
 
                 {
                     tab === 'coach' && (
@@ -1854,7 +2194,7 @@ const FlipCard = ({ card }: { card: any }) => {
             className="perspective-1000 h-64 cursor-pointer"
             onClick={() => setFlipped(!flipped)}
         >
-            <div className={`relative w-full h-full transition-all duration-700 transform transform-style-preserve-3d ${flipped ? 'rotate-y-180' : ''} bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-accent/30`}>
+            <div className={`relative w-full h-full transition-all duration-700 transform-style-preserve-3d ${flipped ? 'rotate-y-180' : ''} bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-accent/30`}>
                 {/* Front */}
                 <div className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-6 text-center bg-white rounded-2xl">
                     <div className="text-5xl mb-4 transition transform hover:scale-110">{card.icon}</div>
