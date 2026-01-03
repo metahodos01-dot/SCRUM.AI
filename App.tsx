@@ -3,12 +3,12 @@ import { HashRouter, Routes, Route, Navigate, useParams, useNavigate } from 'rea
 import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
-import { Project, User, Epic, UserStory, TeamMember, Impediment } from './types';
+import { Project, User, Epic, UserStory, TeamMember, Impediment, Risk } from './types';
 import { Layout } from './components/Layout';
 import { aiService } from './services/aiService';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  LineChart, Line, Legend, AreaChart, Area
+  LineChart, Line, Legend, AreaChart, Area, ReferenceLine, ComposedChart
 } from 'recharts';
 
 // --- Components for specific pages/phases ---
@@ -1058,6 +1058,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                 storyPoints: s.storyPoints || 0,
                 estimatedHours: s.estimatedHours || 0,
                 status: 'todo',
+                // IMPORTANT: Inherit sprint status so it appears on board if parent was there
                 isInSprint: story.isInSprint,
                 assigneeIds: story.assigneeIds
             }));
@@ -1067,7 +1068,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                 ...epic,
                 stories: epic.stories.flatMap(s => s.id === storyId ? newStories : s)
             })));
-            alert(`Story split into ${newStories.length} smaller stories!`);
+            alert(`Story refined! ${newStories.length} new stories created.`);
         } catch(e) { console.error(e); alert("Failed to refine story."); }
         setAiLoading(false);
     }
@@ -1197,54 +1198,135 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
         )
     }
 
+    const CustomTooltip = ({ active, payload, label }: any) => {
+        if (active && payload && payload.length) {
+            const actual = payload.find((p: any) => p.dataKey === 'actual');
+            const ideal = payload.find((p: any) => p.dataKey === 'ideal');
+            const diff = actual?.value - ideal?.value;
+            const diffFormatted = diff ? diff.toFixed(1) : '0';
+
+            return (
+                <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-xl text-xs">
+                    <p className="font-bold text-gray-700 mb-2">Day {label}</p>
+                    <p className="text-red-500 font-bold">Actual: {actual?.value}h</p>
+                    <p className="text-gray-400">Ideal: {ideal?.value.toFixed(1)}h</p>
+                    <div className={`mt-2 pt-2 border-t font-bold ${diff > 0 ? 'text-orange-500' : 'text-green-600'}`}>
+                         {diff > 0 ? `+${diffFormatted}h (Late)` : `${diffFormatted}h (Ahead)`}
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
+
     const BurndownChart = () => {
+        if (!project.phases.sprint?.startDate) return <div className="p-10 text-center text-gray-400">Start Sprint to view Burndown</div>;
+
         const totalHours = getSprintStories().reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
+        // Calculate Total Sprint Days (Duration weeks * 7 days)
         const sprintDays = duration * 7;
-        const startDate = project.phases.sprint?.startDate ? new Date(project.phases.sprint.startDate).getTime() : Date.now();
+        const startDate = new Date(project.phases.sprint.startDate).getTime();
+        const now = Date.now();
         
         const data = [];
         const idealSlope = totalHours / sprintDays;
 
+        // Determine sprint status based on latest data point
+        let isAhead = false;
+        let isBehind = false;
+        let diff = 0;
+
         for (let i = 0; i <= sprintDays; i++) {
+            // Timestamp for end of Day 'i'
             const dayTimestamp = startDate + (i * 24 * 60 * 60 * 1000);
             
-            // Actual Logic: Check which stories were completed BY this day
-            // Only plot 'actual' if the day has passed or is today
+            // Ideal Logic: Linear drop
+            const ideal = Math.max(0, totalHours - (idealSlope * i));
+
+            // Actual Logic:
             let actual = null;
-            if (dayTimestamp <= Date.now() + (24 * 60 * 60 * 1000)) {
-                const storiesCompleted = getSprintStories().filter(s => 
+            // Only plot 'actual' if this day has passed or is today (within 24h buffer)
+            if (dayTimestamp <= (now + 86400000)) {
+                // Sum estimated hours of all DONE stories completed ON OR BEFORE this day
+                const storiesCompletedByNow = getSprintStories().filter(s => 
                     s.status === 'done' && s.completedAt && s.completedAt <= dayTimestamp
                 );
-                const hoursCompleted = storiesCompleted.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
+                
+                const hoursCompleted = storiesCompletedByNow.reduce((acc, s) => acc + (s.estimatedHours || 0), 0);
                 actual = Math.max(0, totalHours - hoursCompleted);
+
+                // Update status flags based on latest calculated day
+                diff = actual - ideal;
+                isAhead = diff < 0;
+                isBehind = diff > 0;
             }
 
             data.push({
                 day: i,
-                ideal: Math.max(0, totalHours - (idealSlope * i)),
+                ideal: ideal,
                 actual: actual
             });
         }
 
         return (
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col h-72">
-                <h4 className="text-sm font-bold text-gray-500 uppercase mb-4">Sprint Burndown (Hours)</h4>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col h-96">
+                <div className="flex justify-between items-center mb-6">
+                    <h4 className="text-sm font-bold text-gray-500 uppercase">Sprint Burndown (Hours)</h4>
+                    {data.some(d => d.actual !== null) && (
+                        <div className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-2 ${isBehind ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                            {isBehind ? `⚠️ ${diff.toFixed(0)}h Behind` : `⚡ ${Math.abs(diff).toFixed(0)}h Ahead`}
+                        </div>
+                    )}
+                </div>
+                
                 <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <ComposedChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#FF5A6E" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#FF5A6E" stopOpacity={0}/>
+                                <stop offset="5%" stopColor="#F87171" stopOpacity={0.2}/>
+                                <stop offset="95%" stopColor="#F87171" stopOpacity={0}/>
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fontSize: 12}} />
-                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12}} />
-                        <Tooltip />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                        <XAxis 
+                            dataKey="day" 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{fontSize: 12, fill: '#6B7280'}} 
+                            label={{ value: 'Days', position: 'insideBottomRight', offset: -5, fontSize: 10, fill: '#9CA3AF' }}
+                        />
+                        <YAxis 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{fontSize: 12, fill: '#6B7280'}} 
+                            label={{ value: 'Hours', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#9CA3AF' }}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
                         <Legend iconType="circle" />
-                        <Line type="monotone" dataKey="ideal" stroke="#9CA3AF" strokeDasharray="5 5" name="Ideal Trend" dot={false} strokeWidth={2} />
-                        <Area type="monotone" dataKey="actual" stroke="#FF5A6E" fillOpacity={1} fill="url(#colorActual)" name="Actual Remaining" strokeWidth={3} />
-                    </AreaChart>
+                        
+                        {/* Ideal Trend - Dashed Gray */}
+                        <Line 
+                            type="linear" 
+                            dataKey="ideal" 
+                            stroke="#9CA3AF" 
+                            strokeDasharray="5 5" 
+                            name="Ideal Trend" 
+                            dot={false} 
+                            strokeWidth={2} 
+                        />
+                        
+                        {/* Actual Remaining - Solid Red with Area */}
+                        <Area 
+                            type="monotone" 
+                            dataKey="actual" 
+                            stroke="#EF4444" 
+                            fill="url(#colorActual)" 
+                            name="Actual Remaining" 
+                            strokeWidth={3} 
+                            dot={{ fill: '#EF4444', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                            connectNulls={false}
+                        />
+                    </ComposedChart>
                 </ResponsiveContainer>
             </div>
         );
@@ -1530,6 +1612,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                                 <ImpedimentsTracker />
                              </div>
                          </div>
+                         {/* Inserted New Burndown Chart Here */}
                          <BurndownChart />
                      </div>
                  )}
@@ -1537,23 +1620,42 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
                  {view === 'refinement' && (
                      <div className="max-w-4xl mx-auto space-y-6 h-full overflow-y-auto pb-6">
                         <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                             <h3 className="text-2xl font-bold text-sidebar mb-2">Backlog Refinement</h3>
-                             <p className="text-gray-500 mb-6">Use AI to split large stories (vertical slicing) into manageable chunks.</p>
+                             <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-sidebar mb-2">Backlog Refinement</h3>
+                                    <p className="text-gray-500">Use AI to split large stories (vertical slicing) into manageable chunks.</p>
+                                </div>
+                             </div>
                              
                              <div className="space-y-4">
                                 {localEpics.flatMap(e => e.stories).map(story => (
-                                    <div key={story.id} className="border p-4 rounded-xl flex justify-between items-center hover:bg-gray-50">
-                                        <div>
-                                            <p className="font-bold text-gray-800">{story.title}</p>
-                                            <p className="text-sm text-gray-500 line-clamp-1">{story.description}</p>
+                                    <div key={story.id} className={`border p-4 rounded-xl flex flex-col gap-4 hover:bg-gray-50 transition ${story.isInSprint ? 'border-l-4 border-l-accent' : ''}`}>
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    {story.isInSprint && <span className="text-[10px] bg-accent text-white px-2 py-0.5 rounded-full font-bold">IN SPRINT</span>}
+                                                    <p className="font-bold text-gray-800">{story.title}</p>
+                                                </div>
+                                                <p className="text-sm text-gray-500 line-clamp-1">{story.description}</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => refineStory(story.id)}
+                                                disabled={aiLoading}
+                                                className="bg-sidebar text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-opacity-90 disabled:opacity-50 whitespace-nowrap"
+                                            >
+                                                {aiLoading ? 'Splitting...' : '✂️ Split with AI'}
+                                            </button>
                                         </div>
-                                        <button 
-                                            onClick={() => refineStory(story.id)}
-                                            disabled={aiLoading}
-                                            className="bg-sidebar text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-opacity-90 disabled:opacity-50"
-                                        >
-                                            {aiLoading ? 'Splitting...' : '✂️ Split with AI'}
-                                        </button>
+                                        
+                                        {/* Action Bar for New Stories */}
+                                        <div className="flex gap-2 justify-end border-t pt-2 mt-2">
+                                            <button 
+                                                onClick={() => toggleSprintStatus(story.id)} 
+                                                className={`text-xs font-bold px-3 py-1 rounded border transition ${story.isInSprint ? 'text-red-500 border-red-200 hover:bg-red-50' : 'text-green-600 border-green-200 hover:bg-green-50'}`}
+                                            >
+                                                {story.isInSprint ? 'Remove from Sprint' : 'Add to Sprint'}
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                              </div>
@@ -1614,142 +1716,100 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
     );
 }
 
-const PhaseStats = () => {
-    const data = [
-        { name: 'Sprint 1', sp: 20, velocity: 20 },
-        { name: 'Sprint 2', sp: 30, velocity: 25 },
-        { name: 'Sprint 3', sp: 25, velocity: 25 },
-    ];
-
-    return (
-        <div className="space-y-8">
-            <h2 className="text-3xl font-extrabold text-sidebar">10. STATISTICS</h2>
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 h-96">
-                <h3 className="font-bold mb-6">Velocity Chart</h3>
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="sp" fill="#FF5A6E" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-        </div>
-    )
-}
-
-const PhaseObeya = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
-    const [risks, setRisks] = useState<any[]>(project.phases.obeya?.risks || []);
-    const [loading, setLoading] = useState(false);
-
-    const handleAnalyze = async () => {
-        setLoading(true);
-        try {
-            const result = await aiService.analyzeRisks(project);
-            setRisks(result);
-        } catch(e) { console.error(e); alert("AI Error"); }
-        setLoading(false);
-    };
-
-    return (
-        <div className="space-y-8 animate-fade-in">
-             <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-extrabold text-sidebar">11. DIGITAL OBEYA ROOM</h2>
-                <button onClick={handleAnalyze} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
-                    {loading ? 'Analyzing Risks...' : '🔍 Analyze Risks'}
-                </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Vision Card */}
-                <div className="col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                     <h3 className="font-bold text-gray-500 uppercase text-xs mb-4">Vision & Goals</h3>
-                     <div className="prose prose-sm line-clamp-6 text-gray-600" dangerouslySetInnerHTML={{__html: project.phases.vision?.text || 'No vision defined'}} />
-                </div>
-
-                {/* Velocity Card (Reuse Stats data logic in real app) */}
-                <div className="col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center items-center">
-                    <h3 className="font-bold text-gray-500 uppercase text-xs mb-2">Team Velocity</h3>
-                    <div className="text-5xl font-extrabold text-accent">24</div>
-                    <p className="text-gray-400 text-xs mt-1">Story Points / Sprint</p>
-                </div>
-
-                {/* Status Card */}
-                <div className="col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-gray-500 uppercase text-xs mb-4">Sprint Status</h3>
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium text-gray-700">Completion</span>
-                        <span className="text-sm font-bold text-green-600">65%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div className="bg-green-600 h-2.5 rounded-full" style={{width: '65%'}}></div>
-                    </div>
-                </div>
-
-                {/* Risks Board */}
-                <div className="col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-gray-800 mb-6">⚠️ Project Risks & Mitigation</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {risks.map((risk, i) => (
-                            <div key={i} className="border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
-                                <div className="flex justify-between mb-2">
-                                    <h4 className="font-bold text-red-900">{risk.risk}</h4>
-                                    <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded font-bold">{risk.impact}</span>
-                                </div>
-                                <p className="text-sm text-red-700">🛡️ {risk.mitigation}</p>
-                            </div>
-                        ))}
-                    </div>
-                    {risks.length > 0 && (
-                         <button onClick={() => onSave({ risks })} className="mt-4 text-xs text-gray-500 underline hover:text-sidebar">Save Risk Analysis</button>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
+const PhaseStats = ({ project }: { project: Project }) => {
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-gray-500">
+      <div className="text-4xl mb-4">📈</div>
+      <h2 className="text-xl font-bold">Project Analytics</h2>
+      <p className="text-sm">Comprehensive charts and velocity tracking coming soon.</p>
+    </div>
+  );
 };
 
-// --- Main App Logic ---
+const PhaseObeya = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
+  const [loading, setLoading] = useState(false);
+  const [risks, setRisks] = useState<Risk[]>(project.phases.obeya?.risks || []);
 
-const ProjectManager = () => {
-  const { projectId, phase } = useParams();
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      const result = await aiService.analyzeRisks(project);
+      setRisks(result);
+    } catch(e) { console.error(e); }
+    setLoading(false);
+  };
+
+  return (
+    <div className="space-y-6">
+       <div className="flex justify-between items-center">
+            <h2 className="text-3xl font-extrabold text-sidebar">11. OBEYA ROOM (RISKS)</h2>
+            <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
+                {loading ? 'Analyzing Risks...' : '⚡ Analyze Risks'}
+            </button>
+       </div>
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           {risks.map((risk, i) => (
+               <div key={i} className={`bg-white p-6 rounded-2xl border-l-8 shadow-sm ${risk.impact === 'High' ? 'border-red-500' : risk.impact === 'Medium' ? 'border-yellow-500' : 'border-blue-500'}`}>
+                   <div className="flex justify-between items-start mb-2">
+                       <h4 className="font-bold text-gray-800 text-lg">{risk.risk}</h4>
+                       <span className="text-xs font-bold uppercase px-2 py-1 bg-gray-100 rounded">{risk.impact} Impact</span>
+                   </div>
+                   <p className="text-gray-600 text-sm mt-2"><strong className="text-gray-900">Mitigation:</strong> {risk.mitigation}</p>
+               </div>
+           ))}
+           {risks.length === 0 && <p className="text-gray-400">No risks identified yet.</p>}
+       </div>
+       {risks.length > 0 && (
+           <button onClick={() => onSave({ risks })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Risks</button>
+       )}
+    </div>
+  );
+};
+
+const ProjectView = () => {
+  const { projectId, phaseId } = useParams();
   const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!projectId) return;
-    const unsubscribe = onSnapshot(doc(db, "projects", projectId), (doc) => {
-      setProject({ id: doc.id, ...doc.data() } as Project);
+    const unsubscribe = onSnapshot(doc(db, "projects", projectId), (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        setProject({ id: docSnapshot.id, ...docSnapshot.data() } as Project);
+      }
+      setLoading(false);
     });
     return () => unsubscribe();
   }, [projectId]);
 
-  const handleSavePhase = async (phaseName: string, data: any) => {
-    if (!project) return;
+  const handlePhaseSave = async (phaseData: any) => {
+    if (!project || !phaseId) return;
     const projectRef = doc(db, 'projects', project.id);
+    const phaseKey = `phases.${phaseId}`;
+    const currentPhaseData = project.phases[phaseId as keyof typeof project.phases] || {};
+    
     await updateDoc(projectRef, {
-      [`phases.${phaseName}`]: data
+        [phaseKey]: { ...currentPhaseData, ...phaseData }
     });
-    // Optional: Auto-navigate to next phase logic could go here
   };
 
-  if (!project) return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (loading) return <div className="h-screen flex items-center justify-center text-gray-500">Loading project...</div>;
+  if (!project) return <div className="h-screen flex items-center justify-center text-gray-500">Project not found</div>;
 
   const renderPhase = () => {
-    switch(phase) {
-      case 'mindset': return <PhaseMindset project={project} onSave={(data) => handleSavePhase('mindset', data)} />;
-      case 'vision': return <PhaseVision project={project} onSave={(data) => handleSavePhase('vision', data)} />;
-      case 'objectives': return <PhaseObjectives project={project} onSave={(data) => handleSavePhase('objectives', data)} />;
-      case 'kpis': return <PhaseKPIs project={project} onSave={(data) => handleSavePhase('kpis', data)} />;
-      case 'backlog': return <PhaseBacklog project={project} onSave={(data) => handleSavePhase('backlog', data)} />;
-      case 'team': return <PhaseTeam project={project} onSave={(data) => handleSavePhase('team', data)} />;
-      case 'estimates': return <PhaseEstimates project={project} onSave={(data) => handleSavePhase('estimates', data)} />;
-      case 'roadmap': return <PhaseRoadmap project={project} onSave={(data) => handleSavePhase('roadmap', data)} />;
-      case 'sprint': return <PhaseSprint project={project} onSave={(data) => handleSavePhase('sprint', data)} />;
-      case 'stats': return <PhaseStats />;
-      case 'obeya': return <PhaseObeya project={project} onSave={(data) => handleSavePhase('obeya', data)} />;
-      default: return <div>Phase not implemented in this demo</div>;
+    switch (phaseId) {
+      case 'mindset': return <PhaseMindset project={project} onSave={handlePhaseSave} />;
+      case 'vision': return <PhaseVision project={project} onSave={handlePhaseSave} />;
+      case 'objectives': return <PhaseObjectives project={project} onSave={handlePhaseSave} />;
+      case 'kpis': return <PhaseKPIs project={project} onSave={handlePhaseSave} />;
+      case 'backlog': return <PhaseBacklog project={project} onSave={handlePhaseSave} />;
+      case 'team': return <PhaseTeam project={project} onSave={handlePhaseSave} />;
+      case 'estimates': return <PhaseEstimates project={project} onSave={handlePhaseSave} />;
+      case 'roadmap': return <PhaseRoadmap project={project} onSave={handlePhaseSave} />;
+      case 'sprint': return <PhaseSprint project={project} onSave={handlePhaseSave} />;
+      case 'stats': return <PhaseStats project={project} />;
+      case 'obeya': return <PhaseObeya project={project} onSave={handlePhaseSave} />;
+      default: return <Navigate to={`/project/${projectId}/mindset`} />;
     }
   };
 
@@ -1760,29 +1820,30 @@ const ProjectManager = () => {
   );
 };
 
-export default function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+const App = () => {
+  const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
-      if (u) setUser({ uid: u.uid, email: u.email, displayName: u.displayName, role: 'admin' }); // Mock admin role
-      else setUser(null);
-      setLoading(false);
+      setUser(u);
+      setAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  if (loading) return null;
+  if (authLoading) return <div className="h-screen flex items-center justify-center bg-bg text-sidebar font-bold">SCRUM AI Loading...</div>;
 
   return (
     <HashRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={!user ? <Login /> : <Navigate to="/projects" />} />
         <Route path="/projects" element={user ? <ProjectList /> : <Navigate to="/login" />} />
-        <Route path="/project/:projectId/:phase" element={user ? <ProjectManager /> : <Navigate to="/login" />} />
-        <Route path="*" element={<Navigate to={user ? "/projects" : "/login"} />} />
+        <Route path="/project/:projectId/:phaseId" element={user ? <ProjectView /> : <Navigate to="/login" />} />
+        <Route path="/" element={<Navigate to={user ? "/projects" : "/login"} />} />
       </Routes>
     </HashRouter>
   );
-}
+};
+
+export default App;
