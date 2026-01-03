@@ -2529,23 +2529,31 @@ const PhaseReleasePlanner = ({ project, onSave }: { project: Project, onSave: (d
     }, [project.phases.strategicPlanner]);
 
     const handleGeneratePlan = async () => {
+        console.log("handleGeneratePlan started");
         setLoading(true);
         try {
             const backlog = project.phases.backlog?.epics || [];
             const team = project.phases.team?.members || [];
             const vision = project.phases.vision?.text || '';
 
+            console.log("Backlog count:", backlog.length);
+            console.log("Team count:", team.length);
+            console.log("Vision length:", vision.length);
+
             if (backlog.length === 0 || team.length === 0) {
+                console.warn("Backlog or Team is empty");
                 alert("Please ensure Backlog and Team phases are completed first.");
                 setLoading(false);
                 return;
             }
 
+            console.log("Calling aiService...");
             // Parallel execution for plan and skill gaps
             const [generatedPlan, skillGaps] = await Promise.all([
                 aiService.generateReleasePlan(backlog, team, vision),
                 aiService.analyzeSkillGaps(backlog, team)
             ]);
+            console.log("AI Service returned:", { generatedPlan, skillGaps });
 
             const newPlan: ReleasePlan = {
                 id: `plan-${Date.now()}`,
@@ -2559,10 +2567,11 @@ const PhaseReleasePlanner = ({ project, onSave }: { project: Project, onSave: (d
 
             setPlan(newPlan);
             onSave({ strategicPlanner: newPlan });
+            console.log("Plan saved successfully");
 
         } catch (e) {
-            console.error(e);
-            alert("Error generating release plan");
+            console.error("handleGeneratePlan Error:", e);
+            alert("Error generating release plan: " + (e as any).message);
         }
         setLoading(false);
     };
@@ -2766,85 +2775,7 @@ const PhaseReleasePlanner = ({ project, onSave }: { project: Project, onSave: (d
     );
 };
 
-const PhaseRoadmap = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
-    const [roadmap, setRoadmap] = useState<any[]>(project.phases.roadmap?.items || []);
-    const [loading, setLoading] = useState(false);
 
-    const handleGenerate = async () => {
-        setLoading(true);
-        try {
-            const epics = project.phases.backlog?.epics || [];
-            if (epics.length === 0) {
-                alert("Backlog is empty. Please generate backlog first.");
-                return;
-            }
-            const result = await aiService.generateRoadmap(project.phases.vision?.text || '', epics);
-            setRoadmap(result);
-        } catch (e) { console.error(e); alert("AI Error"); }
-        setLoading(false);
-    };
-
-    const updateFeature = (phaseIndex: number, featureIndex: number, val: string) => {
-        const newRoadmap = [...roadmap];
-        newRoadmap[phaseIndex].features[featureIndex] = val;
-        setRoadmap(newRoadmap);
-    }
-
-    const removeFeature = (phaseIndex: number, featureIndex: number) => {
-        const newRoadmap = [...roadmap];
-        newRoadmap[phaseIndex].features.splice(featureIndex, 1);
-        setRoadmap(newRoadmap);
-    }
-
-    const addFeature = (phaseIndex: number) => {
-        const newRoadmap = [...roadmap];
-        newRoadmap[phaseIndex].features.push("New Feature");
-        setRoadmap(newRoadmap);
-    }
-
-    return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-extrabold text-sidebar">8. PRODUCT ROADMAP</h2>
-                <button onClick={handleGenerate} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
-                    {loading ? 'Planning...' : '✨ Generate Roadmap'}
-                </button>
-            </div>
-
-            <div className="space-y-4">
-                {roadmap.map((phase, idx) => (
-                    <div key={idx} className="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-accent">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-800">{phase.phase}</h3>
-                                <p className="text-sm text-gray-500 font-medium">Duration: {phase.duration}</p>
-                            </div>
-                            <span className="bg-accent/10 text-accent px-3 py-1 rounded text-xs font-bold uppercase">{phase.focus}</span>
-                        </div>
-                        <div className="space-y-2">
-                            <h4 className="text-xs font-bold text-gray-400 uppercase">Associated Stories / Features</h4>
-                            {phase.features.map((f: string, i: number) => (
-                                <div key={i} className="flex items-center gap-2 bg-gray-50 p-2 rounded group">
-                                    <span className="w-2 h-2 rounded-full bg-sidebar shrink-0"></span>
-                                    <input
-                                        className="w-full bg-transparent border-none text-sm text-gray-700 focus:ring-0"
-                                        value={f}
-                                        onChange={e => updateFeature(idx, i, e.target.value)}
-                                    />
-                                    <button onClick={() => removeFeature(idx, i)} className="text-gray-400 hover:text-red-500 px-2 opacity-0 group-hover:opacity-100">×</button>
-                                </div>
-                            ))}
-                            <button onClick={() => addFeature(idx)} className="text-xs text-accent font-bold hover:underline">+ Add Feature</button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            {roadmap.length > 0 && (
-                <button onClick={() => onSave({ items: roadmap })} className="w-full bg-accent text-white py-4 rounded-xl font-bold shadow-lg">Save Roadmap</button>
-            )}
-        </div>
-    );
-};
 
 const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
     // Tabs state
@@ -3668,76 +3599,7 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
 
 
 
-const PhaseObeya = ({ project, onSave }: { project: Project, onSave: (data: any) => void }) => {
-    const [risks, setRisks] = useState<any[]>(project.phases.obeya?.risks || []);
-    const [loading, setLoading] = useState(false);
 
-    const handleAnalyze = async () => {
-        setLoading(true);
-        try {
-            const result = await aiService.analyzeRisks(project);
-            setRisks(result);
-        } catch (e) { console.error(e); alert("AI Error"); }
-        setLoading(false);
-    };
-
-    return (
-        <div className="space-y-8 animate-fade-in">
-            <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-extrabold text-sidebar">11. DIGITAL OBEYA ROOM</h2>
-                <button onClick={handleAnalyze} disabled={loading} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold text-sm">
-                    {loading ? 'Analyzing Risks...' : '🔍 Analyze Risks'}
-                </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Vision Card */}
-                <div className="col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-gray-500 uppercase text-xs mb-4">Vision & Goals</h3>
-                    <div className="prose prose-sm line-clamp-6 text-gray-600" dangerouslySetInnerHTML={{ __html: project.phases.vision?.text || 'No vision defined' }} />
-                </div>
-
-                {/* Velocity Card (Reuse Stats data logic in real app) */}
-                <div className="col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-center items-center">
-                    <h3 className="font-bold text-gray-500 uppercase text-xs mb-2">Team Velocity</h3>
-                    <div className="text-5xl font-extrabold text-accent">24</div>
-                    <p className="text-gray-400 text-xs mt-1">Story Points / Sprint</p>
-                </div>
-
-                {/* Status Card */}
-                <div className="col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-gray-500 uppercase text-xs mb-4">Sprint Status</h3>
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium text-gray-700">Completion</span>
-                        <span className="text-sm font-bold text-green-600">65%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div className="bg-green-600 h-2.5 rounded-full" style={{ width: '65%' }}></div>
-                    </div>
-                </div>
-
-                {/* Risks Board */}
-                <div className="col-span-3 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-gray-800 mb-6">⚠️ Project Risks & Mitigation</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {risks.map((risk, i) => (
-                            <div key={i} className="border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
-                                <div className="flex justify-between mb-2">
-                                    <h4 className="font-bold text-red-900">{risk.risk}</h4>
-                                    <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded font-bold">{risk.impact}</span>
-                                </div>
-                                <p className="text-sm text-red-700">🛡️ {risk.mitigation}</p>
-                            </div>
-                        ))}
-                    </div>
-                    {risks.length > 0 && (
-                        <button onClick={() => onSave({ risks })} className="mt-4 text-xs text-gray-500 underline hover:text-sidebar">Save Risk Analysis</button>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
 
 const FlipCard = ({ card }: { card: any }) => {
     const [flipped, setFlipped] = useState(false);
@@ -3817,10 +3679,8 @@ const ProjectManager = () => {
             case 'team': return <PhaseTeam project={project} onSave={(data) => handleSavePhase('team', data)} />;
             case 'estimates': return <PhaseEstimates project={project} onSave={(data) => handleSavePhase('estimates', data)} />;
             case 'strategic-planner': return <PhaseReleasePlanner project={project} onSave={(data) => handleSavePhase('strategicPlanner', data)} />;
-            case 'roadmap': return <PhaseRoadmap project={project} onSave={(data) => handleSavePhase('roadmap', data)} />;
             case 'sprint': return <SprintCenter project={project} onUpdateProject={handleUpdateProject} />;
             case 'stats': return <ExecutiveObeya project={project} />;
-            case 'obeya': return <PhaseObeya project={project} onSave={(data) => handleSavePhase('obeya', data)} />;
             default: return <div>Phase not implemented in this demo</div>;
         }
     };

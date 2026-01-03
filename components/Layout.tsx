@@ -17,11 +17,8 @@ const PHASES = [
   { id: 'backlog', label: '5. Backlog', icon: '📋' },
   { id: 'team', label: '6. Team', icon: '👥' },
   { id: 'estimates', label: '7. Estimates', icon: '🔢' },
-  { id: 'strategic-planner', label: '8. Strat. Planner', icon: '🏁' },
-  { id: 'roadmap', label: '9. Roadmap', icon: '🗺️' },
-  { id: 'sprint', label: '10. Sprint', icon: '🏃' },
-  { id: 'stats', label: '11. Statistics', icon: '📈' },
-  { id: 'obeya', label: '12. Obeya Room', icon: '🏛️' },
+  { id: 'sprint', label: '9. Sprint', icon: '🏃' },
+  { id: 'stats', label: '10. Statistics', icon: '📈' },
 ];
 
 export const Layout: React.FC<LayoutProps> = ({ children, currentProject }) => {
