@@ -1053,16 +1053,14 @@ const PhaseObjectives = ({ project, onSave }: { project: Project, onSave: (data:
 
             {/* Vision Summary - Enlarged */}
             <div className="bg-gradient-to-r from-sidebar to-gray-800 rounded-2xl p-6 text-white">
-                <div className="flex justify-between items-start mb-4">
-                    <h3 className="font-bold text-lg flex items-center gap-2">
-                        <span className="text-xl">🎯</span> Vision Statement di Riferimento
-                    </h3>
-                    <span className="text-xs bg-white/20 px-3 py-1 rounded-full">Fase 2</span>
-                </div>
+                <h3 className="font-bold text-lg flex items-center gap-2 mb-4">
+                    <span className="text-xl">🎯</span> Vision Statement di Riferimento
+                </h3>
                 <div
-                    className="prose prose-invert prose-sm max-w-none max-h-[200px] overflow-y-auto custom-scrollbar
-                        prose-headings:text-white prose-p:text-gray-200 prose-strong:text-accent"
-                    dangerouslySetInnerHTML={{ __html: project.phases.vision?.text || '<p class="text-gray-400 italic">Nessuna vision trovata. Completa la Fase 2.</p>' }}
+                    className="prose prose-invert prose-sm max-w-none max-h-[300px] overflow-y-auto custom-scrollbar
+                        prose-headings:text-white prose-p:text-gray-200 prose-strong:text-accent
+                        bg-white/5 rounded-xl p-4"
+                    dangerouslySetInnerHTML={{ __html: project.phases.vision?.text || '<p class="text-gray-400 italic">Nessuna vision trovata. Completa la Product Vision.</p>' }}
                 />
             </div>
 
@@ -1108,11 +1106,11 @@ const PhaseObjectives = ({ project, onSave }: { project: Project, onSave: (data:
                         <div key={idx} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                             {/* Header */}
                             <div
-                                className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition"
+                                className="p-4 flex justify-between items-start cursor-pointer hover:bg-gray-50 transition"
                                 onClick={() => setExpandedIdx(expandedIdx === idx ? null : idx)}
                             >
-                                <div className="flex items-center gap-3">
-                                    <span className="w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center font-bold text-sm">
+                                <div className="flex items-start gap-3 flex-1 min-w-0 pr-4">
+                                    <span className="w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 mt-1">
                                         {idx + 1}
                                     </span>
                                     <input
@@ -1120,11 +1118,11 @@ const PhaseObjectives = ({ project, onSave }: { project: Project, onSave: (data:
                                         value={obj.title}
                                         onChange={e => updateObjective(idx, 'title', e.target.value)}
                                         onClick={e => e.stopPropagation()}
-                                        className="text-lg font-bold text-sidebar bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-accent rounded px-2"
+                                        className="w-full text-lg font-bold text-sidebar bg-transparent border-b-2 border-transparent hover:border-gray-200 focus:border-accent focus:outline-none rounded-none px-1 py-1"
                                         placeholder="Titolo Obiettivo"
                                     />
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-shrink-0">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); deleteObjective(idx); }}
                                         className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition"
@@ -1140,61 +1138,61 @@ const PhaseObjectives = ({ project, onSave }: { project: Project, onSave: (data:
 
                             {/* Expanded Content */}
                             {expandedIdx === idx && (
-                                <div className="p-4 pt-0 border-t border-gray-100 space-y-4">
+                                <div className="p-5 pt-0 border-t border-gray-100 space-y-5">
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descrizione</label>
+                                        <label className="block text-sm font-bold text-gray-600 mb-2">📝 Descrizione Completa</label>
                                         <textarea
                                             value={obj.description}
                                             onChange={e => updateObjective(idx, 'description', e.target.value)}
-                                            className="w-full border border-gray-200 p-3 rounded-xl bg-gray-50 min-h-[80px] resize-y"
+                                            className="w-full border border-gray-200 p-4 rounded-xl bg-gray-50 min-h-[100px] resize-y text-gray-800"
                                             placeholder="Descrizione dettagliata dell'obiettivo..."
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
-                                            <label className="block text-xs font-bold text-blue-700 uppercase mb-1">🎯 Specific (Cosa)</label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                                            <label className="block text-sm font-bold text-blue-800 mb-2">🎯 COSA</label>
                                             <textarea
                                                 value={obj.specific}
                                                 onChange={e => updateObjective(idx, 'specific', e.target.value)}
-                                                className="w-full bg-white border border-blue-200 p-2 rounded-lg text-sm min-h-[60px] resize-y"
-                                                placeholder="Cosa vuoi raggiungere?"
+                                                className="w-full bg-white border border-blue-300 p-3 rounded-lg text-sm min-h-[120px] resize-y text-gray-800"
+                                                placeholder="Cosa vuoi raggiungere esattamente? Descrivi in dettaglio..."
                                             />
                                         </div>
-                                        <div className="bg-green-50 p-3 rounded-xl border border-green-100">
-                                            <label className="block text-xs font-bold text-green-700 uppercase mb-1">📏 Measurable (Come)</label>
+                                        <div className="bg-green-50 p-4 rounded-xl border border-green-200">
+                                            <label className="block text-sm font-bold text-green-800 mb-2">📏 COME</label>
                                             <textarea
                                                 value={obj.measurable}
                                                 onChange={e => updateObjective(idx, 'measurable', e.target.value)}
-                                                className="w-full bg-white border border-green-200 p-2 rounded-lg text-sm min-h-[60px] resize-y"
-                                                placeholder="Come misurerai il successo?"
+                                                className="w-full bg-white border border-green-300 p-3 rounded-lg text-sm min-h-[120px] resize-y text-gray-800"
+                                                placeholder="Come misurerai il successo? Quali metriche userai?"
                                             />
                                         </div>
-                                        <div className="bg-yellow-50 p-3 rounded-xl border border-yellow-100">
-                                            <label className="block text-xs font-bold text-yellow-700 uppercase mb-1">✅ Achievable (Perché)</label>
+                                        <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                                            <label className="block text-sm font-bold text-yellow-800 mb-2">✅ PERCHÉ</label>
                                             <textarea
                                                 value={obj.achievable}
                                                 onChange={e => updateObjective(idx, 'achievable', e.target.value)}
-                                                className="w-full bg-white border border-yellow-200 p-2 rounded-lg text-sm min-h-[60px] resize-y"
-                                                placeholder="Perché è raggiungibile?"
+                                                className="w-full bg-white border border-yellow-300 p-3 rounded-lg text-sm min-h-[120px] resize-y text-gray-800"
+                                                placeholder="Perché è raggiungibile? Quali risorse hai a disposizione?"
                                             />
                                         </div>
-                                        <div className="bg-purple-50 p-3 rounded-xl border border-purple-100">
-                                            <label className="block text-xs font-bold text-purple-700 uppercase mb-1">💡 Relevant (Importanza)</label>
+                                        <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
+                                            <label className="block text-sm font-bold text-purple-800 mb-2">💡 IMPORTANZA</label>
                                             <textarea
                                                 value={obj.relevant}
                                                 onChange={e => updateObjective(idx, 'relevant', e.target.value)}
-                                                className="w-full bg-white border border-purple-200 p-2 rounded-lg text-sm min-h-[60px] resize-y"
-                                                placeholder="Perché è importante?"
+                                                className="w-full bg-white border border-purple-300 p-3 rounded-lg text-sm min-h-[120px] resize-y text-gray-800"
+                                                placeholder="Perché è importante per il progetto? Quale valore aggiunge?"
                                             />
                                         </div>
-                                        <div className="bg-red-50 p-3 rounded-xl border border-red-100">
-                                            <label className="block text-xs font-bold text-red-700 uppercase mb-1">⏰ Time-Bound (Quando)</label>
+                                        <div className="bg-red-50 p-4 rounded-xl border border-red-200 md:col-span-2">
+                                            <label className="block text-sm font-bold text-red-800 mb-2">⏰ QUANDO</label>
                                             <textarea
                                                 value={obj.timeBound}
                                                 onChange={e => updateObjective(idx, 'timeBound', e.target.value)}
-                                                className="w-full bg-white border border-red-200 p-2 rounded-lg text-sm min-h-[60px] resize-y"
-                                                placeholder="Entro quando?"
+                                                className="w-full bg-white border border-red-300 p-3 rounded-lg text-sm min-h-[80px] resize-y text-gray-800"
+                                                placeholder="Entro quando deve essere completato? Data o milestone..."
                                             />
                                         </div>
                                     </div>
