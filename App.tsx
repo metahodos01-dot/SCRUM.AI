@@ -30,23 +30,226 @@ const Login = () => {
 
     return (
         <div className="flex items-center justify-center h-screen bg-sidebar">
-            <div className="bg-white p-8 rounded-2xl shadow-xl w-96">
-                <h1 className="text-2xl font-extrabold text-sidebar mb-6 text-center">SCRUM AI MANAGER</h1>
+            <div className="bg-white p-8 rounded-[16px] shadow-card w-96">
+                <h1 className="text-2xl font-extrabold text-sidebar mb-6 text-center uppercase tracking-tight">SCRUM AI MANAGER</h1>
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-accent focus:border-accent text-gray-900 bg-white" required />
+                        <label className="block text-[11px] font-bold text-text-secondary uppercase tracking-wide mb-1">Email</label>
+                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 block w-full border border-border-light rounded-btn p-3 focus:ring-2 focus:ring-btn-primary focus:border-btn-primary text-text-primary bg-white transition-all" required />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Password</label>
-                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-lg p-2 focus:ring-accent focus:border-accent text-gray-900 bg-white" required />
+                        <label className="block text-[11px] font-bold text-text-secondary uppercase tracking-wide mb-1">Password</label>
+                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="mt-1 block w-full border border-border-light rounded-btn p-3 focus:ring-2 focus:ring-btn-primary focus:border-btn-primary text-text-primary bg-white transition-all" required />
                     </div>
-                    <button type="submit" className="w-full bg-accent text-white py-2 rounded-xl font-bold hover:bg-opacity-90 transition">Login</button>
+                    <button type="submit" className="w-full bg-btn-primary hover:bg-btn-primary-hover text-white py-3 rounded-btn font-bold transition-all duration-200 hover:shadow-lg">Login</button>
                 </form>
-                <div className="mt-4 text-xs text-gray-400 text-center">
+                <div className="mt-4 text-xs text-text-secondary text-center">
                     Use admin credentials provided in documentation.
                 </div>
             </div>
+        </div>
+    );
+};
+
+// --- Homepage Component ---
+
+const Homepage = () => {
+    const navigate = useNavigate();
+
+    return (
+        <div className="min-h-screen bg-white overflow-x-hidden">
+            {/* Hero Section */}
+            <section className="min-h-screen flex flex-col items-center justify-center px-8 py-20 text-center">
+                {/* META HODOS Logo */}
+                <div className="flex flex-col items-center gap-2 mb-12">
+                    <div className="flex gap-1.5">
+                        <span className="w-3 h-3 rounded-full bg-accent"></span>
+                        <span className="w-3 h-3 rounded-full bg-btn-primary"></span>
+                        <span className="w-3 h-3 rounded-full bg-badge"></span>
+                    </div>
+                    <div className="text-center mt-2">
+                        <p className="text-lg font-light tracking-[0.2em] text-sidebar">METÀ</p>
+                        <p className="text-lg font-bold tracking-[0.2em] text-sidebar">HODÓS</p>
+                    </div>
+                    <p className="text-[9px] text-text-secondary uppercase tracking-[0.25em] mt-1">
+                        Persone • Agilità • Risultati
+                    </p>
+                </div>
+
+                {/* Main Title */}
+                <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-sidebar mb-6 tracking-tight">
+                    Scrum.AI
+                </h1>
+
+                {/* Subtitle */}
+                <p className="text-base md:text-lg text-text-secondary max-w-2xl mb-2">
+                    L'evoluzione del Project Management Agile potenziata dall'AI.
+                </p>
+                <p className="text-base text-text-secondary max-w-xl mb-10">
+                    Il metodo scientifico applicato alla gestione dei progetti.
+                </p>
+
+                {/* CTA Buttons */}
+                <div className="flex items-center gap-6">
+                    <button
+                        onClick={() => navigate('/login')}
+                        className="bg-badge hover:bg-orange-500 text-white px-8 py-4 rounded-full font-bold text-sm transition-all duration-200 hover:shadow-lg uppercase tracking-wider"
+                    >
+                        Inizia Ora
+                    </button>
+                    <button
+                        onClick={() => document.getElementById('vision')?.scrollIntoView({ behavior: 'smooth' })}
+                        className="text-text-secondary hover:text-sidebar font-medium text-sm transition-colors flex items-center gap-2 uppercase tracking-wider"
+                    >
+                        Scopri il Metodo <span className="text-base">→</span>
+                    </button>
+                </div>
+            </section>
+
+            {/* Vision Section - Dark Background */}
+            <section id="vision" className="bg-sidebar py-24 px-8">
+                <div className="max-w-[1200px] mx-auto">
+                    <div className="grid md:grid-cols-2 gap-16 items-start">
+                        {/* Left - Vision Statement */}
+                        <div>
+                            <p className="text-[10px] font-bold text-badge uppercase tracking-[0.3em] mb-8">
+                                LA NOSTRA VISIONE
+                            </p>
+                            <h2 className="text-4xl md:text-5xl font-extrabold text-white leading-tight mb-6">
+                                Rendere l'eccellenza strategica <span className="text-badge">semplice</span>,<br />
+                                umana e immediata.
+                            </h2>
+                            <p className="text-gray-400 text-base leading-relaxed">
+                                Trasformiamo la complessità in risultati pratici stando<br />
+                                "<span className="text-badge font-semibold">nel fango</span>" con i leader, parlando un linguaggio diretto<br />
+                                e usando un approccio empatico.
+                            </p>
+                        </div>
+
+                        {/* Right - Feature Cards */}
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Empatia Operativa */}
+                            <div className="bg-[#3B4252] p-5 rounded-[12px]">
+                                <div className="text-xl mb-3">🎯</div>
+                                <h3 className="text-white font-bold text-xs mb-2 uppercase tracking-wide">EMPATIA OPERATIVA</h3>
+                                <p className="text-gray-500 text-[10px] leading-relaxed uppercase tracking-wide">
+                                    Sentiamo le sfide del team<br />come le nostre sfide.
+                                </p>
+                            </div>
+
+                            {/* Semplicità Radicale */}
+                            <div className="bg-[#3B4252] p-5 rounded-[12px]">
+                                <div className="text-xl mb-3">💡</div>
+                                <h3 className="text-white font-bold text-xs mb-2 uppercase tracking-wide">SEMPLICITÀ RADICALE</h3>
+                                <p className="text-gray-500 text-[10px] leading-relaxed uppercase tracking-wide">
+                                    Togliamo il superfluo per<br />arrivare al nocciolo.
+                                </p>
+                            </div>
+
+                            {/* Toolbox Infinita */}
+                            <div className="bg-[#3B4252] p-5 rounded-[12px]">
+                                <div className="text-xl mb-3">🛠️</div>
+                                <h3 className="text-white font-bold text-xs mb-2 uppercase tracking-wide">TOOLBOX INFINITA</h3>
+                                <p className="text-gray-500 text-[10px] leading-relaxed uppercase tracking-wide">
+                                    Intere aziendali agile,<br />mai un approccio fisso.
+                                </p>
+                            </div>
+
+                            {/* Zero Ego */}
+                            <div className="bg-[#3B4252] p-5 rounded-[12px]">
+                                <div className="w-5 h-5 rounded-full border-2 border-accent mb-3"></div>
+                                <h3 className="text-white font-bold text-xs mb-2 uppercase tracking-wide">ZERO EGO</h3>
+                                <p className="text-gray-500 text-[10px] leading-relaxed uppercase tracking-wide">
+                                    Il successo è il vostro, preferiamo stare<br />dietro le quinte.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* META HODOS Logo - Right side */}
+                <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden xl:flex flex-col items-center gap-2">
+                    <div className="flex gap-1">
+                        <span className="w-2 h-2 rounded-full bg-accent"></span>
+                        <span className="w-2 h-2 rounded-full bg-btn-primary"></span>
+                        <span className="w-2 h-2 rounded-full bg-badge"></span>
+                    </div>
+                    <p className="text-xs font-light tracking-[0.15em] text-gray-400">METÀ</p>
+                    <p className="text-xs font-bold tracking-[0.15em] text-white">HODÓS</p>
+                </div>
+            </section>
+
+            {/* Training Path Section - Light Background */}
+            <section className="py-24 px-8 bg-white">
+                <div className="max-w-[1200px] mx-auto">
+                    {/* Section Header */}
+                    <div className="text-center mb-16">
+                        <p className="text-[10px] font-bold text-accent uppercase tracking-[0.3em]">
+                            AGILE MINDSET
+                        </p>
+                    </div>
+
+                    {/* 3 Cards */}
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {/* Card 01 */}
+                        <div className="bg-white rounded-[20px] p-8 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1">
+                            <span className="text-7xl font-extrabold text-gray-100 block mb-2">01</span>
+                            <h3 className="text-lg font-extrabold text-sidebar mb-4 uppercase tracking-wide">AGILE MINDSET</h3>
+                            <p className="text-text-secondary text-sm leading-relaxed mb-8">
+                                Fase 1: Comprensione del mindset Agile, cultura Fail-Safe e introduzione al framework Scrum con simulazioni interattive.
+                            </p>
+                            <p className="text-accent text-[10px] font-bold uppercase tracking-[0.2em]">
+                                MINDSET & FRAMEWORK
+                            </p>
+                        </div>
+
+                        {/* Card 02 */}
+                        <div className="bg-white rounded-[20px] p-8 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1">
+                            <span className="text-7xl font-extrabold text-gray-100 block mb-2">02</span>
+                            <h3 className="text-lg font-extrabold text-sidebar mb-4 uppercase tracking-wide">VISION & STRATEGY</h3>
+                            <p className="text-text-secondary text-sm leading-relaxed mb-8">
+                                Fase 2: Definizione della Product Vision, obiettivi SMART, KPI e creazione del Product Backlog con AI assistance.
+                            </p>
+                            <p className="text-btn-primary text-[10px] font-bold uppercase tracking-[0.2em]">
+                                PIANIFICAZIONE AI-DRIVEN
+                            </p>
+                        </div>
+
+                        {/* Card 03 */}
+                        <div className="bg-white rounded-[20px] p-8 shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1">
+                            <span className="text-7xl font-extrabold text-gray-100 block mb-2">03</span>
+                            <h3 className="text-lg font-extrabold text-sidebar mb-4 uppercase tracking-wide">SPRINT EXECUTION</h3>
+                            <p className="text-text-secondary text-sm leading-relaxed mb-8">
+                                Fase 3: Gestione Sprint, Obeya Room virtuale, metriche in tempo reale e retrospettive guidate per il miglioramento continuo.
+                            </p>
+                            <p className="text-badge text-[10px] font-bold uppercase tracking-[0.2em]">
+                                DELIVERY & MONITORING
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Footer */}
+            <footer className="py-20 px-8 bg-white border-t border-border-light">
+                <div className="max-w-[1200px] mx-auto text-center">
+                    {/* META HODOS Logo */}
+                    <div className="flex flex-col items-center gap-2 mb-4">
+                        <div className="flex gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full bg-accent"></span>
+                            <span className="w-2.5 h-2.5 rounded-full bg-btn-primary"></span>
+                            <span className="w-2.5 h-2.5 rounded-full bg-badge"></span>
+                        </div>
+                        <div className="text-center mt-1">
+                            <p className="text-base font-light tracking-[0.2em] text-sidebar">METÀ</p>
+                            <p className="text-base font-bold tracking-[0.2em] text-sidebar">HODÓS</p>
+                        </div>
+                    </div>
+                    <p className="text-[9px] text-text-secondary uppercase tracking-[0.25em]">
+                        Persone • Agilità • Risultati
+                    </p>
+                </div>
+            </footer>
         </div>
     );
 };
@@ -84,15 +287,15 @@ const ProjectList = () => {
     };
 
     return (
-        <div className="min-h-screen bg-bg p-10">
-            <div className="max-w-6xl mx-auto">
+        <div className="min-h-screen bg-white p-10">
+            <div className="max-w-[1200px] mx-auto">
                 <div className="flex justify-between items-center mb-10">
-                    <h1 className="text-4xl font-extrabold text-sidebar">YOUR PROJECTS</h1>
-                    <div className="flex gap-2 items-center">
+                    <h1 className="text-4xl font-extrabold text-sidebar uppercase tracking-tight">YOUR PROJECTS</h1>
+                    <div className="flex gap-3 items-center">
                         <select
                             value={language}
                             onChange={(e) => setLanguage(e.target.value as 'it' | 'en')}
-                            className="border border-gray-300 rounded-lg p-2 bg-white text-gray-800 font-bold"
+                            className="border border-border-light rounded-btn px-4 py-2 bg-white text-text-primary font-bold transition-all focus:ring-2 focus:ring-btn-primary"
                         >
                             <option value="it">🇮🇹 ITA</option>
                             <option value="en">🇬🇧 ENG</option>
@@ -100,24 +303,24 @@ const ProjectList = () => {
                         <input
                             type="text"
                             placeholder="New Project Name"
-                            className="border border-gray-300 rounded-lg p-2 text-gray-900 bg-white"
+                            className="border border-border-light rounded-btn px-4 py-2 text-text-primary bg-white focus:ring-2 focus:ring-btn-primary transition-all"
                             value={newProjectName}
                             onChange={e => setNewProjectName(e.target.value)}
                         />
-                        <button onClick={createProject} className="bg-sidebar text-white px-6 py-2 rounded-xl font-bold">
+                        <button onClick={createProject} className="bg-btn-primary hover:bg-btn-primary-hover text-white px-6 py-2 rounded-btn font-bold transition-all duration-200 hover:shadow-lg">
                             + Create
                         </button>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {projects.map(p => (
-                        <div key={p.id} onClick={() => navigate(`/project/${p.id}/mindset`)} className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-md cursor-pointer border border-gray-100 transition">
-                            <h3 className="text-xl font-bold text-gray-800 mb-2">{p.name}</h3>
+                        <div key={p.id} onClick={() => navigate(`/project/${p.id}/mindset`)} className="bg-white p-6 rounded-[16px] shadow-card hover:shadow-card-hover cursor-pointer border border-border-light transition-all duration-200 hover:-translate-y-1">
+                            <h3 className="text-xl font-bold text-text-primary mb-2">{p.name}</h3>
                             <div className="flex justify-between items-center mt-4">
-                                <span className="text-sm text-gray-500">{new Date(p.createdAt).toLocaleDateString()}</span>
+                                <span className="text-sm text-text-secondary">{new Date(p.createdAt).toLocaleDateString()}</span>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs">{p.language === 'it' ? '🇮🇹' : '🇬🇧'}</span>
-                                    <span className="bg-accent/10 text-accent px-3 py-1 rounded-full text-xs font-bold uppercase">{p.status}</span>
+                                    <span className="bg-accent/10 text-accent px-3 py-1 rounded-pill text-[11px] font-bold uppercase tracking-wide">{p.status}</span>
                                 </div>
                             </div>
                         </div>
@@ -552,13 +755,13 @@ const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: an
 
     return (
         <div className="space-y-6 animate-fade-in h-[calc(100vh-140px)] flex flex-col">
-            <h2 className="text-3xl font-extrabold text-sidebar">1. AGILE MINDSET & SCRUM FRAMEWORK</h2>
+            <h2 className="text-3xl font-extrabold text-sidebar uppercase tracking-tight">1. AGILE MINDSET & SCRUM FRAMEWORK</h2>
 
             {/* Tabs */}
-            <div className="flex gap-4 border-b border-gray-200 pb-1">
-                <button onClick={() => setTab('mindset')} className={`pb-2 px-4 font-bold ${tab === 'mindset' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}>The Mindset Shift</button>
-                <button onClick={() => setTab('scrum')} className={`pb-2 px-4 font-bold ${tab === 'scrum' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}>Scrum Framework</button>
-                <button onClick={() => setTab('coach')} className={`pb-2 px-4 font-bold ${tab === 'coach' ? 'text-accent border-b-2 border-accent' : 'text-gray-400'}`}>🤖 AI Agile Coach</button>
+            <div className="flex gap-4 border-b border-border-light pb-1">
+                <button onClick={() => setTab('mindset')} className={`pb-2 px-4 font-bold transition-all ${tab === 'mindset' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-text-primary'}`}>The Mindset Shift</button>
+                <button onClick={() => setTab('scrum')} className={`pb-2 px-4 font-bold transition-all ${tab === 'scrum' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-text-primary'}`}>Scrum Framework</button>
+                <button onClick={() => setTab('coach')} className={`pb-2 px-4 font-bold transition-all ${tab === 'coach' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-text-primary'}`}>🤖 AI Agile Coach</button>
             </div>
 
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
@@ -603,7 +806,7 @@ const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: an
                                 </div>
                                 <button
                                     onClick={() => setAccepted(true)}
-                                    className="mt-8 bg-accent text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition transform"
+                                    className="mt-8 bg-btn-primary hover:bg-btn-primary-hover text-white px-8 py-3 rounded-btn font-bold shadow-lg hover:scale-105 transition-all duration-200"
                                 >
                                     ✨ Evolve to Quickworks Agile
                                 </button>
@@ -656,7 +859,7 @@ const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: an
                                 <div className="flex justify-center mt-8">
                                     <button
                                         onClick={() => onSave({ completed: true, comment: 'Embraced Quickworks Way' })}
-                                        className="bg-accent text-white px-10 py-4 rounded-2xl font-bold shadow-lg hover:bg-opacity-90 hover:scale-105 transition text-lg flex items-center gap-2"
+                                        className="bg-btn-primary hover:bg-btn-primary-hover text-white px-10 py-4 rounded-btn font-bold shadow-card hover:shadow-card-hover hover:scale-105 transition-all duration-200 text-lg flex items-center gap-2"
                                     >
                                         🚀 I'm Ready to Start!
                                     </button>
@@ -671,36 +874,36 @@ const PhaseMindset = ({ project, onSave }: { project: Project, onSave: (data: an
 
                 {
                     tab === 'coach' && (
-                        <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                            <div className="bg-gray-50 p-4 border-b">
-                                <h3 className="font-bold text-gray-700">Ask the Agile Coach</h3>
-                                <p className="text-xs text-gray-500">Ask about roles, ceremonies, or how to handle a situation.</p>
+                        <div className="flex flex-col h-full bg-white rounded-[16px] shadow-card border border-border-light overflow-hidden">
+                            <div className="bg-white p-4 border-b border-border-light">
+                                <h3 className="font-bold text-text-primary">Ask the Agile Coach</h3>
+                                <p className="text-xs text-text-secondary">Ask about roles, ceremonies, or how to handle a situation.</p>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
+                            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
                                 {chatHistory.length === 0 && (
-                                    <div className="text-center text-gray-400 mt-10">
+                                    <div className="text-center text-text-secondary mt-10">
                                         <div className="text-4xl mb-2">🤖</div>
                                         <p>Hi! I'm your AI Agile Coach. Ask me anything about Scrum!</p>
                                     </div>
                                 )}
                                 {chatHistory.map((msg, i) => (
                                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[80%] p-3 rounded-xl text-sm ${msg.role === 'user' ? 'bg-sidebar text-white rounded-tr-none' : 'bg-white border shadow-sm text-gray-800 rounded-tl-none'}`}>
+                                        <div className={`max-w-[80%] p-3 rounded-btn text-sm ${msg.role === 'user' ? 'bg-sidebar text-white rounded-tr-none' : 'bg-white border border-border-light shadow-card text-text-primary rounded-tl-none'}`}>
                                             {msg.text}
                                         </div>
                                     </div>
                                 ))}
-                                {isTyping && <div className="text-xs text-gray-400 ml-2">Coach is typing...</div>}
+                                {isTyping && <div className="text-xs text-text-secondary ml-2">Coach is typing...</div>}
                             </div>
-                            <div className="p-4 bg-white border-t flex gap-2">
+                            <div className="p-4 bg-white border-t border-border-light flex gap-2">
                                 <input
-                                    className="flex-1 border border-gray-300 rounded-xl px-4 py-2 focus:ring-accent focus:border-accent"
+                                    className="flex-1 border border-border-light rounded-btn px-4 py-3 focus:ring-2 focus:ring-btn-primary focus:border-btn-primary text-text-primary transition-all"
                                     placeholder="Type your question..."
                                     value={question}
                                     onChange={e => setQuestion(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && handleAskCoach()}
                                 />
-                                <button onClick={handleAskCoach} className="bg-accent text-white px-4 py-2 rounded-xl font-bold">Send</button>
+                                <button onClick={handleAskCoach} className="bg-btn-primary hover:bg-btn-primary-hover text-white px-6 py-3 rounded-btn font-bold transition-all duration-200">Send</button>
                             </div>
                         </div>
                     )
@@ -2692,10 +2895,11 @@ export default function App() {
     return (
         <HashRouter>
             <Routes>
+                <Route path="/" element={<Homepage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/projects" element={user ? <ProjectList /> : <Navigate to="/login" />} />
                 <Route path="/project/:projectId/:phase" element={user ? <ProjectManager /> : <Navigate to="/login" />} />
-                <Route path="*" element={<Navigate to={user ? "/projects" : "/login"} />} />
+                <Route path="*" element={<Navigate to="/" />} />
             </Routes>
         </HashRouter>
     );
