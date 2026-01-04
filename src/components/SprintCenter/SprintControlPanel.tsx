@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, SprintData } from '../../../types';
 
 interface SprintControlPanelProps {
@@ -10,6 +10,17 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
     const sprint = project.phases.sprint;
     const [customDuration, setCustomDuration] = useState<number>(sprint?.durationWeeks || 2);
     const [isEditingDuration, setIsEditingDuration] = useState(false);
+    const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (sprint?.isActive && sprint.endDate) {
+            const now = new Date();
+            const end = new Date(sprint.endDate);
+            const diffTime = end.getTime() - now.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            setDaysRemaining(diffDays);
+        }
+    }, [sprint]);
 
     // FIX: Handle missing sprint data by offering initialization
     if (!sprint) {
@@ -108,8 +119,14 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
                 </div>
 
                 {sprint.status === 'active' && (
-                    <div className="px-3 py-1 bg-slate-700 rounded text-xs text-slate-300">
-                        Ends: {new Date(sprint.endDate).toLocaleDateString()}
+                    <div className="flex gap-4 items-center">
+                        <div className="px-3 py-1 bg-slate-700 rounded text-xs text-slate-300">
+                            Ends: {new Date(sprint.endDate).toLocaleDateString()}
+                        </div>
+                        <div className="flex flex-col items-center bg-slate-900/50 px-3 py-1 rounded border border-slate-700/50">
+                            <span className="text-xl font-mono font-bold text-white leading-none">{daysRemaining}</span>
+                            <span className="text-[9px] text-slate-400 uppercase tracking-wider">Days Left</span>
+                        </div>
                     </div>
                 )}
             </div>
