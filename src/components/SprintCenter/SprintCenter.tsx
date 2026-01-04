@@ -10,7 +10,7 @@ interface SprintCenterProps {
     onUpdateProject: (project: Project) => void;
 }
 
-type Tab = 'planning' | 'obeya' | 'monitoring' | 'insights';
+type Tab = 'planning' | 'obeya' | 'problem_solving' | 'insights';
 
 import SprintControlPanel from './SprintControlPanel';
 
@@ -25,7 +25,7 @@ const SprintCenter: React.FC<SprintCenterProps> = ({ project, onUpdateProject })
                 return <PlanningEngine project={project} onUpdate={onUpdateProject} />;
             case 'obeya':
                 return <ObeyaBoard project={project} onUpdate={onUpdateProject} />;
-            case 'monitoring':
+            case 'problem_solving':
                 return <MonitoringHub project={project} onUpdate={onUpdateProject} />;
             case 'insights':
                 return <InsightsDashboard project={project} />;
@@ -44,7 +44,7 @@ const SprintCenter: React.FC<SprintCenterProps> = ({ project, onUpdateProject })
                 </div>
 
                 <div className="flex bg-slate-800/50 p-1 rounded-lg border border-slate-700/50 backdrop-blur-sm">
-                    {(['planning', 'obeya', 'monitoring', 'insights'] as Tab[]).map((tab) => (
+                    {(['planning', 'obeya', 'problem_solving', 'insights'] as Tab[]).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -53,7 +53,7 @@ const SprintCenter: React.FC<SprintCenterProps> = ({ project, onUpdateProject })
                                 : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                                 }`}
                         >
-                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {tab === 'problem_solving' ? 'Problem Solving' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                         </button>
                     ))}
                 </div>

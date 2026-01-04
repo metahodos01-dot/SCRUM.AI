@@ -268,6 +268,27 @@ export const generateWordReport = async (project: Project) => {
                     ]
                 }));
             }
+
+            // Tasks Sub-row (if any)
+            if (s.tasks && s.tasks.length > 0) {
+                const taskText = s.tasks.map(t => `• [${t.status}] ${t.description} (${t.hoursRemaining}h)`).join("\n");
+                rows.push(new TableRow({
+                    children: [
+                        new TableCell({
+                            children: [
+                                new Paragraph({
+                                    children: [new TextRun({ text: "Tasks:", bold: true, size: 20 })]
+                                }),
+                                new Paragraph({
+                                    children: [new TextRun({ text: taskText, size: 18, color: "666666" })]
+                                })
+                            ],
+                            columnSpan: 5,
+                            shading: { fill: "FFFFF0" } // Slightly different shade for tasks
+                        })
+                    ]
+                }));
+            }
         });
 
         return new Table({

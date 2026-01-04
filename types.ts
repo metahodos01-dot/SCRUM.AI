@@ -115,6 +115,7 @@ export interface UserStory {
   priority: number;
   detailLevel: 'high' | 'medium' | 'low';
   businessValue?: number;
+  tasks?: Task[]; // Audit: Added for Hierarchy Report
 }
 
 export interface TimeLog {
