@@ -95,7 +95,7 @@ export interface UserStory {
   acceptanceCriteria: string[];
   storyPoints: number;
   estimatedHours: number;
-  status: 'todo' | 'doing' | 'testing' | 'done'; // Added 'testing'
+  status: 'todo' | 'doing' | 'testing' | 'done' | 'In Progress' | 'Testing'; // Expanded for Kanban compatibility
   assigneeIds?: string[];
   isInSprint?: boolean;
   completedAt?: number; // Timestamp for Burndown calculation

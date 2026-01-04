@@ -71,10 +71,11 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project, onUpdate }) => {
                     if (story) {
                         story.status = newStatus as any;
                         // If moving to done, set completedAt
-                        if (newStatus === 'done' && !story.completedAt) {
+                        if (newStatus.toLowerCase() === 'done' && !story.completedAt) {
                             story.completedAt = Date.now();
-                        } else if (newStatus !== 'done') {
-                            story.completedAt = undefined;
+                        } else if (newStatus.toLowerCase() !== 'done') {
+                            // FIREBASE FIX: Do not set to undefined, delete the key
+                            delete story.completedAt;
                         }
                         storyFound = true;
                         break; // Stop finding once found

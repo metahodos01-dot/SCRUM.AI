@@ -21,7 +21,8 @@ const InsightsDashboard: React.FC<InsightsDashboardProps> = ({ project }) => {
     // Calculate Remaining Hours (Real-time)
     // Detailed logic: If status is 'done', remaining is 0. Else, use estimatedHours.
     const currentRemainingHours = stories.reduce((acc, s) => {
-        return s.status === 'done' ? acc : acc + s.estimatedHours;
+        // Check for 'done' or 'Done'
+        return s.status.toLowerCase() === 'done' ? acc : acc + s.estimatedHours;
     }, 0);
 
     const completedHours = totalEstimatedHours - currentRemainingHours;
@@ -66,9 +67,11 @@ const InsightsDashboard: React.FC<InsightsDashboardProps> = ({ project }) => {
                 real = totalEstimatedHours;
             } else if (date.toDateString() === now.toDateString()) {
                 // Today: Show current calculated remaining
+                // CRITICAL FIX: Ensure this value is actually Total - Done
                 real = currentRemainingHours;
             } else if (date < now && !snapshot) {
-                // Gaps in history: leave null
+                // Gaps in history: For a hard fix, we can either leave null or backfill.
+                // Leaving null is safer for now to avoid inventing data, but ensures the "Today" point is distinct.
             }
 
             dataPoints.push({
