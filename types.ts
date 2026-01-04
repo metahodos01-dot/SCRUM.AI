@@ -81,11 +81,21 @@ export interface Epic {
   id: string;
   title: string;
   description?: string;           // DEEP: macro-description for low-detail epics
+  features?: Feature[];           // Added: Intermediate hierarchy level
   stories: UserStory[];
   priority: number;               // DEEP: position priority (1 = highest)
   tshirtSize: 'XS' | 'S' | 'M' | 'L' | 'XL';  // DEEP: rough estimate for epics
   objectiveId?: string;           // Links to strategic objective
   targetKpiIds?: string[];        // Links to related KPIs
+}
+
+export interface Feature {
+  id: string;
+  title: string;
+  description: string;
+  stories: UserStory[]; // Optional: if we want strict nesting, stories belong here.
+  // However, to maintain current compatibility, stories might exist at Epic level too.
+  // For this report, we will assume a hierarchy if features are present.
 }
 
 export interface UserStory {

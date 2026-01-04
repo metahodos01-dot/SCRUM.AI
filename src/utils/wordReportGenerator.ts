@@ -126,26 +126,119 @@ export const generateWordReport = async (project: Project) => {
         new Paragraph({ text: "", spacing: { after: 200 } }), // Spacer
     ];
 
-    // 4. Execution (Sprint)
-    const sprintSection = [
+    // 3. Product Hierarchy (Vision -> Epic -> Feature -> Story)
+    const hierarchySection: (Paragraph | Table)[] = [
         new Paragraph({
-            text: "3. Execution Status (Sprint)",
+            text: "2. Product Hierarchy",
             heading: HeadingLevel.HEADING_1,
+            pageBreakBefore: true,
         }),
-        createKeyValue("Current Status", sprint?.isActive ? "Active" : "Planning/Completed"),
-        createKeyValue("Goal", sprint?.goal || "No Goal Set"),
-        createKeyValue("Dates", `${new Date(sprint?.startDate || "").toLocaleDateString()} - ${new Date(sprint?.endDate || "").toLocaleDateString()}`),
+    ];
 
-        new Paragraph({ text: "Performance Metrics:", heading: HeadingLevel.HEADING_2 }),
+    const epics = project.phases.backlog?.epics || [];
+    epics.forEach((epic) => {
+        // Level 1: EPIC
+        hierarchySection.push(
+            new Paragraph({
+                text: `Epic: ${epic.title} (Priority: ${epic.priority})`,
+                heading: HeadingLevel.HEADING_2,
+                spacing: { before: 240, after: 120 },
+            })
+        );
+        hierarchySection.push(
+            new Paragraph({
+                children: [new TextRun({ text: epic.description || "No description" })],
+                style: "Normal",
+                spacing: { after: 120 },
+            })
+        );
+
+        // Features (Level 2)
+        const features = epic.features || [];
+
+        if (features.length > 0) {
+            features.forEach(feature => {
+                hierarchySection.push(
+                    new Paragraph({
+                        text: `Feature: ${feature.title}`,
+                        heading: HeadingLevel.HEADING_3,
+                        indent: { left: 360 }, // Indent
+                        spacing: { before: 120, after: 60 }
+                    })
+                );
+                // Feature Stories
+                if (feature.stories && feature.stories.length > 0) {
+                    hierarchySection.push(createStoriesTable(feature.stories));
+                } else {
+                    hierarchySection.push(new Paragraph({
+                        children: [new TextRun({ text: "No stories in this feature.", italics: true })],
+                        indent: { left: 720 }
+                    }));
+                }
+            });
+        }
+
+        // Direct Stories
+        if (features.length === 0 && epic.stories.length > 0) {
+            hierarchySection.push(createStoriesTable(epic.stories));
+        } else if (features.length === 0 && epic.stories.length === 0) {
+            hierarchySection.push(new Paragraph({
+                children: [new TextRun({ text: "No stories or features defined.", italics: true })],
+                indent: { left: 360 }
+            }));
+        }
+    });
+
+    // 4. Execution & Metrics
+    const metricsSection: (Paragraph | Table)[] = [
+        new Paragraph({
+            text: "3. Execution & Metrics Board",
+            heading: HeadingLevel.HEADING_1,
+            pageBreakBefore: true,
+        }),
+        createKeyValue("Current Sprint Status", sprint?.isActive ? "Active" : "Planning/Completed"),
+        createKeyValue("Sprint Goal", sprint?.goal || "No Goal Set"),
+        // Metrics Table
+        new Paragraph({ text: "Key Metrics", heading: HeadingLevel.HEADING_2 }),
         createTable([
             ["Metric", "Value"],
-            ["Total Scope (SP)", totalSP.toString()],
-            ["Completed (SP)", doneSP.toString()],
-            ["Progress", `${Math.round((doneSP / (totalSP || 1)) * 100)}%`],
-            ["Stories Done", completedStories.length.toString()],
-            ["Throughput (Items)", completedStories.length.toString()],
-        ]),
+            ["Lead Time (Avg)", `${project.phases.sprint?.leadTime || 0} days`],
+            ["Throughput", `${project.phases.sprint?.throughput || 0} items/sprint`],
+            ["Velocity", `${project.phases.sprint?.velocity || 0} SP`],
+            ["Burndown Status", isBurndownOnTrack(project) ? "On Track" : "Action Required"]
+        ])
     ];
+
+    // Helper for Burndown Check (simple logic)
+    function isBurndownOnTrack(p: Project) {
+        const h = p.phases.sprint?.burndownHistory;
+        if (!h || h.length < 2) return true;
+        const last = h[h.length - 1];
+        return last.remainingHours <= last.idealHours * 1.1; // 10% buffer
+    }
+
+    function createStoriesTable(stories: UserStory[]) {
+        return new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            indent: { size: 720, type: WidthType.DXA },
+            rows: [
+                new TableRow({
+                    children: ["ID", "Story", "Status", "Est (hr)"].map(h => new TableCell({
+                        children: [new Paragraph({ children: [new TextRun({ text: h, bold: true })] })],
+                        shading: { fill: "F0F0F0" }
+                    }))
+                }),
+                ...stories.map(s => new TableRow({
+                    children: [
+                        new TableCell({ children: [new Paragraph(s.id)] }),
+                        new TableCell({ children: [new Paragraph(s.title)] }),
+                        new TableCell({ children: [new Paragraph(s.status)] }),
+                        new TableCell({ children: [new Paragraph(s.estimatedHours.toString())] }),
+                    ]
+                }))
+            ]
+        });
+    }
 
     // 5. Risks (Obeya)
     const risksSection = [
@@ -203,7 +296,8 @@ export const generateWordReport = async (project: Project) => {
                     ...coverPage,
                     ...visionSection,
                     ...teamSection,
-                    ...sprintSection,
+                    ...hierarchySection,
+                    ...metricsSection,
                     ...risksSection
                 ],
             },
@@ -238,8 +332,7 @@ function createTable(rows: string[][]) {
                 children: row.map(cellText =>
                     new TableCell({
                         children: [new Paragraph({
-                            text: cellText,
-                            style: i === 0 ? "Header" : undefined // Simple bolding for header
+                            children: [new TextRun({ text: cellText, bold: i === 0 })], // Bold header
                         })],
                         shading: i === 0 ? { fill: "E0E0E0" } : undefined,
                         margins: { top: 100, bottom: 100, left: 100, right: 100 },

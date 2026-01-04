@@ -13,6 +13,8 @@ import {
     LineChart, Line, Legend, AreaChart, Area
 } from 'recharts';
 
+import { sanitizeFirestoreData } from './src/utils/firestoreHelpers';
+
 // --- Components for specific pages/phases ---
 
 const Login = () => {
@@ -3638,6 +3640,8 @@ const ProjectManager = () => {
         return () => unsubscribe();
     }, [projectId]);
 
+
+
     const handleUpdateProject = async (updatedProject: Project) => {
         if (!project) return;
         const projectRef = doc(db, 'projects', project.id);
@@ -3645,8 +3649,8 @@ const ProjectManager = () => {
         // But for now let's assume we just want to save specific phases if modified
         // Or simpler: just update the phases that SprintCenter touches
         // For 'SprintCenter' we might modify 'backlog' and 'sprint' phases.
-
-        await setDoc(projectRef, updatedProject, { merge: true });
+        const cleanProject = sanitizeFirestoreData(updatedProject);
+        await setDoc(projectRef, cleanProject, { merge: true });
     };
 
     const handleSavePhase = async (phaseName: string, data: any) => {

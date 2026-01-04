@@ -13,24 +13,46 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
     const sprint = project.phases.sprint;
     const history = sprint?.burndownHistory || [];
 
-    // 1. Define Time Horizon
-    const durationWeeks = sprint?.durationWeeks || 2;
-    const totalDays = durationWeeks * 7;
+    // 1. Define Time Horizon (Adaptive)
+    const startDate = new Date(sprint?.startDate || Date.now());
+    const endDate = new Date(sprint?.endDate || Date.now() + 14 * 24 * 60 * 60 * 1000); // Default 14 days if missing
+
+    // Calculate total days difference (inclusive of start day)
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 14;
+
     const totalPoints = sprint?.totalEstimatedHours || 0;
+    const now = new Date();
 
     // 2. Generate Full Axis (Day 0 to Day N)
     const chartData = Array.from({ length: totalDays + 1 }, (_, i) => {
         // Ideal: Start at Total, End at 0
+        // Linear formula: y = Total - (Total/Duration * x)
         const ideal = Math.max(0, totalPoints - (totalPoints / totalDays) * i);
 
         // Real: 
-        // If we have a snapshot for this index, use it.
-        // If it's Day 0 and no snapshot, assume full scope (data initialization).
+        // Logic: Stop plotting "Real" if the day is in the future relative to "Now"
+        // Exception: Always show Day 0 (Start)
+
+        const currentPlotDate = new Date(startDate);
+        currentPlotDate.setDate(startDate.getDate() + i);
+
+        const isFuture = currentPlotDate > now && currentPlotDate.toDateString() !== now.toDateString();
+
         let real: number | null = null;
+
+        // Check history first
         if (i < history.length) {
             real = history[i].remainingHours;
-        } else if (i === 0 && history.length === 0) {
+        } else if (i === 0) {
+            // Day 0 assumption
             real = totalPoints;
+        }
+
+        // If no history but it is NOT future, we could technically infer or leave null.
+        // For strict "Stop at Today", we return null if isFuture is true (unless it's day 0).
+        if (isFuture && i !== 0) {
+            real = null;
         }
 
         return {
@@ -47,7 +69,7 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
         // Calculate current remaining
         const sprintStories = project.phases.backlog?.epics.flatMap(e => e.stories).filter(s => s.isInSprint) || [];
         const currentRemaining = sprintStories.reduce((acc, story) => {
-            return acc + (story.status === 'done' ? 0 : (story.estimatedHours || 0));
+            return acc + (story.status.toLowerCase() === 'done' ? 0 : (story.estimatedHours || 0));
         }, 0);
 
         // Calculate Ideal (just for reference in snapshot)
@@ -58,7 +80,7 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
             date: new Date().toLocaleDateString(),
             remainingHours: currentRemaining,
             idealHours: Math.round(idealAtCheck),
-            completedStoryPoints: sprintStories.filter(s => s.status === 'done').reduce((acc, s) => acc + s.storyPoints, 0)
+            completedStoryPoints: sprintStories.filter(s => s.status.toLowerCase() === 'done').reduce((acc, s) => acc + s.storyPoints, 0)
         };
 
         const newProject = JSON.parse(JSON.stringify(project));
@@ -109,7 +131,7 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
                                 contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', color: '#f8fafc' }}
                                 itemStyle={{ color: '#e2e8f0' }}
                             />
-                            <Line type="monotone" dataKey="ideal" stroke="#64748b" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Ideal Trend" />
+                            <Line type="linear" dataKey="ideal" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Ideal Trend" isAnimationActive={false} />
                             <Line type="monotone" dataKey="real" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2 }} activeDot={{ r: 8 }} name="Real Remaining" />
                         </LineChart>
                     </ResponsiveContainer>
