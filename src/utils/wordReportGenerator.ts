@@ -218,25 +218,62 @@ export const generateWordReport = async (project: Project) => {
     }
 
     function createStoriesTable(stories: UserStory[]) {
+        // Flatten rows to include logs
+        const rows: TableRow[] = [
+            new TableRow({
+                children: ["ID", "Story", "Status", "Est (hr)", "Assigned"].map(h => new TableCell({
+                    children: [new Paragraph({ children: [new TextRun({ text: h, bold: true })] })],
+                    shading: { fill: "F0F0F0" }
+                }))
+            })
+        ];
+
+        stories.forEach(s => {
+            // Main Story Row
+            const assignedNames = (s.assignedTo || s.assigneeIds || [])
+                .map(id => project.phases.team?.members.find(m => m.id === id)?.name || "Unknown")
+                .join(", ");
+
+            rows.push(new TableRow({
+                children: [
+                    new TableCell({ children: [new Paragraph(s.id)] }),
+                    new TableCell({ children: [new Paragraph(s.title)] }),
+                    new TableCell({ children: [new Paragraph(s.status)] }),
+                    new TableCell({ children: [new Paragraph(s.estimatedHours.toString())] }),
+                    new TableCell({ children: [new Paragraph(assignedNames || "-")] }),
+                ]
+            }));
+
+            // Time Logs Sub-row (if any)
+            if (s.timeLogs && s.timeLogs.length > 0) {
+                const logText = s.timeLogs.map(l => {
+                    const memberName = project.phases.team?.members.find(m => m.id === l.memberId)?.name || "Unknown";
+                    return `${new Date(l.date).toLocaleDateString()}: -${l.hours}h (${memberName})`;
+                }).join("\n");
+
+                rows.push(new TableRow({
+                    children: [
+                        new TableCell({
+                            children: [
+                                new Paragraph({
+                                    children: [new TextRun({ text: "Work Logs:", bold: true, size: 20 })]
+                                }),
+                                new Paragraph({
+                                    children: [new TextRun({ text: logText, size: 18, color: "666666" })]
+                                })
+                            ],
+                            columnSpan: 5,
+                            shading: { fill: "FAFAFA" }
+                        })
+                    ]
+                }));
+            }
+        });
+
         return new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
             indent: { size: 720, type: WidthType.DXA },
-            rows: [
-                new TableRow({
-                    children: ["ID", "Story", "Status", "Est (hr)"].map(h => new TableCell({
-                        children: [new Paragraph({ children: [new TextRun({ text: h, bold: true })] })],
-                        shading: { fill: "F0F0F0" }
-                    }))
-                }),
-                ...stories.map(s => new TableRow({
-                    children: [
-                        new TableCell({ children: [new Paragraph(s.id)] }),
-                        new TableCell({ children: [new Paragraph(s.title)] }),
-                        new TableCell({ children: [new Paragraph(s.status)] }),
-                        new TableCell({ children: [new Paragraph(s.estimatedHours.toString())] }),
-                    ]
-                }))
-            ]
+            rows: rows
         });
     }
 

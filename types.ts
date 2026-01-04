@@ -104,14 +104,25 @@ export interface UserStory {
   description: string;
   acceptanceCriteria: string[];
   storyPoints: number;
-  estimatedHours: number;
-  status: 'todo' | 'doing' | 'testing' | 'done' | 'In Progress' | 'Testing'; // Expanded for Kanban compatibility
-  assigneeIds?: string[];
+  estimatedHours: number; // Current remaining effort
+  originalEstimate?: number; // Baseline effort (for reference)
+  status: 'todo' | 'doing' | 'testing' | 'done' | 'In Progress' | 'Testing';
+  assigneeIds?: string[]; // Deprecated in favor of assignedTo but kept for backward compat if needed
+  assignedTo?: string[]; // Array of Team Member IDs
+  timeLogs?: TimeLog[];
   isInSprint?: boolean;
-  completedAt?: number; // Timestamp for Burndown calculation
-  priority: number;                // DEEP: priority order within epic
-  detailLevel: 'high' | 'medium' | 'low';  // DEEP: high = sprint-ready, low = future
-  businessValue?: number;          // Added: Business Value Score (1-100)
+  completedAt?: number;
+  priority: number;
+  detailLevel: 'high' | 'medium' | 'low';
+  businessValue?: number;
+}
+
+export interface TimeLog {
+  id: string;
+  memberId: string;
+  hours: number;
+  date: number;
+  description?: string;
 }
 
 export interface Impediment {
