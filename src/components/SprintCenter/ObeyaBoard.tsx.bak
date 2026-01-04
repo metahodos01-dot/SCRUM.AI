@@ -31,27 +31,14 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project, onUpdate }) => {
 
     const handleDrop = (e: React.DragEvent, newStatus: string) => {
         e.preventDefault();
-        e.stopPropagation();
         const storyId = e.dataTransfer.getData('storyId');
-
-        if (!storyId) return;
 
         // CHECK WIP LIMITS
         const targetColumn = columns.find(c => c.id === newStatus);
-        const currentStories = getStoriesByStatus(newStatus);
-
-        // Count: simple length check. 
-        // Note: If we were supporting 'swimlanes' or 'expedite', we might adjust this.
-        // Limit 0 or undefined means UNLIMITED.
-        if (targetColumn && targetColumn.limit && targetColumn.limit > 0) {
-            if (currentStories.length >= targetColumn.limit) {
-                // If moving within same column, don't block (reordering) - though this basic DnD is status-based
-                const story = sprintStories.find(s => s.id === storyId);
-                if (story && story.status !== newStatus) {
-                    alert(`✋ WIP Limit Reached for ${targetColumn.title}!\n\nThis column is full (${currentStories.length}/${targetColumn.limit}).\nFinish something before starting new work!`);
-                    return;
-                }
-            }
+        const currentCount = getStoriesByStatus(newStatus).length;
+        if (targetColumn && targetColumn.limit > 0 && currentCount >= targetColumn.limit) {
+            alert(`WIP Limit Reached! Cannot move more items to ${targetColumn.title} (Limit: ${targetColumn.limit}). Finish existing work first!`);
+            return;
         }
 
         // Create a deep copy of the project to update state immutably
@@ -102,8 +89,8 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project, onUpdate }) => {
                                         </span>
                                     )}
                                     <span className={`text-xs px-2 py-1 rounded-full ${col.limit > 0 && getStoriesByStatus(col.id).length >= col.limit
-                                        ? 'bg-red-900/50 text-red-200 border border-red-500/50'
-                                        : 'bg-slate-700 text-slate-400'
+                                            ? 'bg-red-900/50 text-red-200 border border-red-500/50'
+                                            : 'bg-slate-700 text-slate-400'
                                         }`}>
                                         {getStoriesByStatus(col.id).length}
                                     </span>

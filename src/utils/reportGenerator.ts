@@ -5,6 +5,29 @@ export const generateSprintReport = (project: Project): void => {
     const stories = project.phases.backlog?.epics.flatMap(e => e.stories).filter(s => s.isInSprint) || [];
     const completedStories = stories.filter(s => s.status === 'done');
 
+    // Metrics Calculation
+    const velocity = completedStories.reduce((acc, s) => acc + s.storyPoints, 0);
+    const throughput = completedStories.length;
+
+    // Lead Time Calculation (Sprint Cycle Time: Completed Date - Sprint Start Date)
+    let avgLeadTime = '0';
+    if (completedStories.length > 0 && sprint?.startDate) {
+        const sprintStart = new Date(sprint.startDate).getTime();
+        const totalLeadTime = completedStories.reduce((acc, s) => {
+            const end = s.completedAt || Date.now();
+            // Ensure we don't get negative time if data is weird
+            const diff = Math.max(0, end - sprintStart);
+            return acc + diff;
+        }, 0);
+        const avgMs = totalLeadTime / completedStories.length;
+        avgLeadTime = (avgMs / (1000 * 60 * 60 * 24)).toFixed(1);
+    } else if (completedStories.length > 0) {
+        // Fallback if no start date
+        avgLeadTime = 'N/A';
+    }
+
+    const completionRate = Math.round((completedStories.length / Math.max(stories.length, 1)) * 100);
+
     const htmlContent = `
     <!DOCTYPE html>
     <html lang="en">
@@ -37,19 +60,19 @@ export const generateSprintReport = (project: Project): void => {
 
         <div class="metrics-grid">
             <div class="metric-card">
-                <div class="metric-value">${sprint?.velocity || 0}</div>
+                <div class="metric-value">${velocity}</div>
                 <div class="metric-label">Velocity (SP)</div>
             </div>
             <div class="metric-card">
-                <div class="metric-value">${sprint?.throughput || completedStories.length}</div>
+                <div class="metric-value">${throughput}</div>
                 <div class="metric-label">Throughput (Items)</div>
             </div>
             <div class="metric-card">
-                <div class="metric-value">${sprint?.leadTime || 0} days</div>
+                <div class="metric-value">${avgLeadTime} days</div>
                 <div class="metric-label">Avg Lead Time</div>
             </div>
             <div class="metric-card">
-                <div class="metric-value">${Math.round((completedStories.length / Math.max(stories.length, 1)) * 100)}%</div>
+                <div class="metric-value">${completionRate}%</div>
                 <div class="metric-label">Completion Rate</div>
             </div>
         </div>

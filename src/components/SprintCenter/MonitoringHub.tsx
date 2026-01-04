@@ -9,57 +9,55 @@ interface MonitoringHubProps {
 }
 
 const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
-    // Calculate Real Data
+    // Advanced Burndown Logic
     const sprint = project.phases.sprint;
     const history = sprint?.burndownHistory || [];
 
-    // Mock data fallback if no history exists
-    const mockData = [
-        { day: 'Day 1', ideal: 400, real: 400 },
-        { day: 'Day 2', ideal: 360, real: 380 },
-        { day: 'Day 3', ideal: 320, real: 350 },
-        { day: 'Day 4', ideal: 280, real: 340 },
-        { day: 'Day 5', ideal: 240, real: 340 },
-        { day: 'Day 6', ideal: 200, real: 310 },
-        { day: 'Day 7', ideal: 160, real: null },
-        { day: 'Day 8', ideal: 120, real: null },
-        { day: 'Day 9', ideal: 80, real: null },
-        { day: 'Day 10', ideal: 0, real: null },
-    ];
+    // 1. Define Time Horizon
+    const durationWeeks = sprint?.durationWeeks || 2;
+    const totalDays = durationWeeks * 7;
+    const totalPoints = sprint?.totalEstimatedHours || 0;
 
-    const data = history.length > 0 ? history.map((h, i) => ({
-        day: h.date || `Day ${i + 1}`,
-        ideal: h.idealHours,
-        real: h.remainingHours
-    })) : mockData;
+    // 2. Generate Full Axis (Day 0 to Day N)
+    const chartData = Array.from({ length: totalDays + 1 }, (_, i) => {
+        // Ideal: Start at Total, End at 0
+        const ideal = Math.max(0, totalPoints - (totalPoints / totalDays) * i);
+
+        // Real: 
+        // If we have a snapshot for this index, use it.
+        // If it's Day 0 and no snapshot, assume full scope (data initialization).
+        let real: number | null = null;
+        if (i < history.length) {
+            real = history[i].remainingHours;
+        } else if (i === 0 && history.length === 0) {
+            real = totalPoints;
+        }
+
+        return {
+            day: `Day ${i}`,
+            ideal: Math.round(ideal),
+            real: real,
+        };
+    });
 
     // Snapshot Logic
     const handleUpdateBurndown = () => {
         if (!sprint) return;
 
-        // 1. Calculate current remaining hours
-        // Get all stories in sprint
+        // Calculate current remaining
         const sprintStories = project.phases.backlog?.epics.flatMap(e => e.stories).filter(s => s.isInSprint) || [];
-
-        // Sum remaining estimates (todo/doing/testing)
-        // For done, it is 0.
         const currentRemaining = sprintStories.reduce((acc, story) => {
             return acc + (story.status === 'done' ? 0 : (story.estimatedHours || 0));
         }, 0);
 
-        // 2. Calculate ideal hours
-        // Linear drop from totalEstimatedHours at start to 0 at end
-        // Simplification: Ideal = TotalStart * (1 - (daysPassed / totalDays))
-        // For now, let's just take the last ideal and subtract daily capacity or just use a simple linear formula based on snapshots count.
-        const totalStart = sprint.totalEstimatedHours || 400; // Fallback
-        const totalDays = sprint.durationWeeks * 5; // Assuming 5 day weeks
-        const step = totalStart / totalDays;
-        const nextIdeal = Math.max(0, totalStart - ((history.length) * step));
+        // Calculate Ideal (just for reference in snapshot)
+        const dayIndex = history.length;
+        const idealAtCheck = Math.max(0, totalPoints - (totalPoints / totalDays) * dayIndex);
 
         const newSnapshot: BurndownSnapshot = {
             date: new Date().toLocaleDateString(),
             remainingHours: currentRemaining,
-            idealHours: Math.round(nextIdeal),
+            idealHours: Math.round(idealAtCheck),
             completedStoryPoints: sprintStories.filter(s => s.status === 'done').reduce((acc, s) => acc + s.storyPoints, 0)
         };
 
@@ -72,8 +70,9 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
         onUpdate(newProject);
     };
 
-    // AI Logic Simulation (using data)
-    const isFlatlining = data.length >= 2 && data[data.length - 1].real === data[data.length - 2].real;
+    // AI Logic Simulation
+    // Check if real remaining (from history) has stayed same for last 2 entries
+    const isFlatlining = history.length >= 2 && history[history.length - 1].remainingHours === history[history.length - 2].remainingHours;
 
     return (
         <div className="h-full p-6 flex gap-6">
@@ -102,7 +101,7 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
 
                 <div className="flex-1 w-full min-h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                        <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                             <XAxis dataKey="day" stroke="#94a3b8" tick={{ fontSize: 12 }} />
                             <YAxis stroke="#94a3b8" tick={{ fontSize: 12 }} />
