@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Project } from '../../../types';
-import { generateSprintReport } from '../../utils/sprintReportUtils';
+import { generateWordReport } from '../../utils/wordReportGenerator';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
     ResponsiveContainer, Area, ComposedChart
@@ -220,10 +220,10 @@ const InsightsDashboard: React.FC<InsightsDashboardProps> = ({ project }) => {
 
                         <div className="mt-6 pt-4 border-t border-slate-700/50">
                             <button
-                                onClick={() => generateSprintReport(project)}
-                                className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                                onClick={() => generateWordReport(project)}
+                                className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold transition-all shadow-lg hover:shadow-blue-500/20 flex items-center justify-center gap-2"
                             >
-                                📄 Download Report
+                                📄 Download Full Project Report (.docx)
                             </button>
                         </div>
                     </div>
