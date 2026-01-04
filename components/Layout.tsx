@@ -22,6 +22,46 @@ const PHASES = [
   { id: 'stats', label: '10. Statistics', icon: '📈' },
 ];
 
+const SprintTimer = ({ currentProject }: { currentProject: Project | null }) => {
+  const [timeLeft, setTimeLeft] = React.useState<string>('--:--:--');
+
+  React.useEffect(() => {
+    if (!currentProject?.phases?.sprint?.endDate) return;
+
+    const interval = setInterval(() => {
+      const end = new Date(currentProject.phases.sprint!.endDate).getTime();
+      const now = new Date().getTime();
+      const distance = end - now;
+
+      if (distance < 0) {
+        setTimeLeft('SPRINT ENDED');
+        clearInterval(interval);
+        return;
+      }
+
+      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      setTimeLeft(
+        days > 0
+          ? `${days}d ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+          : `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+      );
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentProject]);
+
+  return (
+    <div className="font-mono text-3xl font-bold text-accent flex flex-col items-end leading-none">
+      <span>{timeLeft}</span>
+      <span className="text-[10px] text-gray-400 font-sans tracking-wider uppercase">Sprint Remaining</span>
+    </div>
+  );
+};
+
 export const Layout: React.FC<LayoutProps> = ({ children, currentProject }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -103,9 +143,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentProject }) => {
           <div className="flex items-center gap-4">
             {/* Sprint Timer Placeholder */}
             {location.pathname.includes('sprint') && (
-              <div className="font-mono text-4xl font-bold text-accent">
-                12:00:00
-              </div>
+              <SprintTimer currentProject={currentProject} />
             )}
           </div>
         </header>
@@ -120,6 +158,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentProject }) => {
         {/* Voice Assistant Overlay */}
         <VoiceAssistant />
       </main>
-    </div>
+    </div >
   );
 };

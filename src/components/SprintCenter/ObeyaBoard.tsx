@@ -6,13 +6,14 @@ interface ObeyaBoardProps {
     onUpdate: (project: Project) => void;
 }
 
-const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project }) => {
+const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project, onUpdate }) => {
+    // Helper to get all stories currently in the sprint
     const sprintStories = project.phases.backlog?.epics.flatMap(e => e.stories).filter(s => s.isInSprint) || [];
 
     const columns = [
         { id: 'todo', title: 'To Do', color: 'border-slate-500' },
         { id: 'doing', title: 'In Progress', color: 'border-blue-500' },
-        { id: 'testing', title: 'Testing', color: 'border-purple-500' }, // Added Testing column
+        { id: 'testing', title: 'Testing', color: 'border-purple-500' },
         { id: 'done', title: 'Done', color: 'border-emerald-500' }
     ];
 
@@ -20,11 +21,55 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project }) => {
         return sprintStories.filter(s => s.status === status);
     };
 
+    const handleDragStart = (e: React.DragEvent, storyId: string) => {
+        e.dataTransfer.setData('storyId', storyId);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+    };
+
+    const handleDrop = (e: React.DragEvent, newStatus: string) => {
+        e.preventDefault();
+        const storyId = e.dataTransfer.getData('storyId');
+
+        // Create a deep copy of the project to update state immutably
+        const newProject = JSON.parse(JSON.stringify(project)) as Project;
+        let storyFound = false;
+
+        // Find and update the story in the nested structure
+        newProject.phases.backlog?.epics.forEach(epic => {
+            const story = epic.stories.find(s => s.id === storyId);
+            if (story) {
+                // Only update if status is actually changing
+                if (story.status !== newStatus) {
+                    story.status = newStatus as any;
+                    // If moving to done, potentially set completedAt
+                    if (newStatus === 'done' && !story.completedAt) {
+                        story.completedAt = Date.now();
+                    } else if (newStatus !== 'done') {
+                        story.completedAt = undefined;
+                    }
+                    storyFound = true;
+                }
+            }
+        });
+
+        if (storyFound) {
+            onUpdate(newProject);
+        }
+    };
+
     return (
         <div className="h-full overflow-x-auto p-6">
             <div className="flex h-full gap-6 min-w-[1000px]">
                 {columns.map(col => (
-                    <div key={col.id} className="flex-1 flex flex-col min-w-[250px] bg-slate-800/20 rounded-xl backdrop-blur-sm border border-slate-700/30">
+                    <div
+                        key={col.id}
+                        className="flex-1 flex flex-col min-w-[250px] bg-slate-800/20 rounded-xl backdrop-blur-sm border border-slate-700/30 transition-colors"
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, col.id)}
+                    >
                         {/* Column Header */}
                         <div className={`p-4 border-b-2 ${col.color} bg-slate-800/50 rounded-t-xl`}>
                             <h3 className="font-semibold text-slate-200 flex justify-between items-center">
@@ -38,7 +83,12 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project }) => {
                         {/* Column Content */}
                         <div className="flex-1 p-3 overflow-y-auto space-y-3">
                             {getStoriesByStatus(col.id).map(story => (
-                                <div key={story.id} className="bg-slate-700/80 p-4 rounded-lg shadow-lg border border-slate-600/50 hover:border-slate-500 transition-all cursor-pointer group">
+                                <div
+                                    key={story.id}
+                                    className="bg-slate-700/80 p-4 rounded-lg shadow-lg border border-slate-600/50 hover:border-slate-500 transition-all cursor-grab active:cursor-grabbing group hover:shadow-xl hover:-translate-y-1"
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, story.id)}
+                                >
                                     <div className="flex justify-between items-start mb-2">
                                         <span className="text-xs font-mono text-slate-400">#{story.id.slice(0, 4)}</span>
                                         <div className="flex gap-1">
@@ -49,7 +99,7 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project }) => {
                                         </div>
                                     </div>
 
-                                    <h4 className="text-slate-100 font-medium text-sm mb-3 leading-snug">{story.title}</h4>
+                                    <h4 className="text-slate-100 font-medium text-sm mb-3 leading-snug select-none">{story.title}</h4>
 
                                     <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-600/50 pt-3">
                                         <div className="flex items-center gap-2">
@@ -65,7 +115,7 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project }) => {
                             ))}
 
                             {getStoriesByStatus(col.id).length === 0 && (
-                                <div className="h-full flex items-center justify-center opacity-20">
+                                <div className="h-full flex items-center justify-center opacity-20 pointer-events-none">
                                     <div className="text-4xl font-bold text-slate-600 rotate-90 transform">EMPTY</div>
                                 </div>
                             )}

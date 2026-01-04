@@ -22,7 +22,7 @@ const SprintCenter: React.FC<SprintCenterProps> = ({ project, onUpdateProject })
             case 'obeya':
                 return <ObeyaBoard project={project} onUpdate={onUpdateProject} />;
             case 'monitoring':
-                return <MonitoringHub project={project} />;
+                return <MonitoringHub project={project} onUpdate={onUpdateProject} />;
             case 'insights':
                 return <InsightsDashboard project={project} />;
             default:
