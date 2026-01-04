@@ -14,9 +14,9 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project, onUpdate }) => {
 
     const columns = [
         { id: 'todo', title: 'To Do', color: 'border-slate-500', limit: 10 },
-        { id: 'doing', title: 'In Progress', color: 'border-blue-500', limit: 3 }, // WIP Limit
-        { id: 'testing', title: 'Testing', color: 'border-purple-500', limit: 2 }, // WIP Limit
-        { id: 'done', title: 'Done', color: 'border-emerald-500', limit: 0 } // No limit
+        { id: 'In Progress', title: 'In Progress', color: 'border-blue-500', limit: 3 }, // Fixed ID to match DB
+        { id: 'Testing', title: 'Testing', color: 'border-purple-500', limit: 2 }, // Fixed ID to match DB
+        { id: 'done', title: 'Done', color: 'border-emerald-500', limit: 0 }
     ];
 
     const getStoriesByStatus = (status: string) => {
