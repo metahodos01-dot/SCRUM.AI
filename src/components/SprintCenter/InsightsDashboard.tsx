@@ -159,16 +159,17 @@ const InsightsDashboard: React.FC<InsightsDashboardProps> = ({ project }) => {
                                     connectNulls={true}
                                 />
 
-                                {/* Ideal Line (Placed after Area to be on top) */}
+                                {/* Ideal Line (High Contrast & Linear) */}
                                 <Line
-                                    type="monotone"
+                                    type="linear"
                                     dataKey="ideal"
-                                    stroke="#10b981"
+                                    stroke="#FACC15" // Bright Yellow
                                     strokeDasharray="5 5"
-                                    strokeWidth={2}
+                                    strokeWidth={3}
                                     dot={false}
                                     name="Ideal Trend"
                                     activeDot={false}
+                                    isAnimationActive={false} // Prevent render glitches
                                 />
                             </ComposedChart>
                         </ResponsiveContainer>
