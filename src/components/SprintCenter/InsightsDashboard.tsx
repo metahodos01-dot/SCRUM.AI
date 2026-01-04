@@ -147,18 +147,6 @@ const InsightsDashboard: React.FC<InsightsDashboardProps> = ({ project }) => {
                                 />
                                 <Legend wrapperStyle={{ paddingTop: '20px' }} />
 
-                                {/* Ideal Line */}
-                                <Line
-                                    type="monotone"
-                                    dataKey="ideal"
-                                    stroke="#10b981"
-                                    strokeDasharray="5 5"
-                                    strokeWidth={2}
-                                    dot={false}
-                                    name="Ideal Trend"
-                                    activeDot={false}
-                                />
-
                                 {/* Real Line Area */}
                                 <Area
                                     type="monotone"
@@ -169,6 +157,18 @@ const InsightsDashboard: React.FC<InsightsDashboardProps> = ({ project }) => {
                                     fill="url(#colorReal)"
                                     name="Remaining Work"
                                     connectNulls={true}
+                                />
+
+                                {/* Ideal Line (Placed after Area to be on top) */}
+                                <Line
+                                    type="monotone"
+                                    dataKey="ideal"
+                                    stroke="#10b981"
+                                    strokeDasharray="5 5"
+                                    strokeWidth={2}
+                                    dot={false}
+                                    name="Ideal Trend"
+                                    activeDot={false}
                                 />
                             </ComposedChart>
                         </ResponsiveContainer>

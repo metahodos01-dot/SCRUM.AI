@@ -120,6 +120,48 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
 
                 {sprint.status === 'active' && (
                     <div className="flex gap-4 items-center">
+                        <div className="flex flex-col items-center bg-slate-900/50 px-2 py-1 rounded border border-slate-700/50">
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => {
+                                        const newProject = JSON.parse(JSON.stringify(project));
+                                        const s = newProject.phases.sprint;
+                                        // Specific Time Travel: Shift window +1 day (Go BACK in time relative to sprint start)
+                                        const start = new Date(s.startDate);
+                                        const end = new Date(s.endDate);
+                                        start.setDate(start.getDate() + 1);
+                                        end.setDate(end.getDate() + 1);
+                                        s.startDate = start.toISOString();
+                                        s.endDate = end.toISOString();
+                                        onUpdate(newProject);
+                                    }}
+                                    className="text-xs bg-slate-700 hover:bg-slate-600 px-1 rounded text-slate-300"
+                                    title="Rewind 1 Day"
+                                >
+                                    ⏪
+                                </button>
+                                <span className="text-[9px] text-slate-500 uppercase font-mono">TIME</span>
+                                <button
+                                    onClick={() => {
+                                        const newProject = JSON.parse(JSON.stringify(project));
+                                        const s = newProject.phases.sprint;
+                                        // Forward 1 day (Advance sprint progress)
+                                        const start = new Date(s.startDate);
+                                        const end = new Date(s.endDate);
+                                        start.setDate(start.getDate() - 1);
+                                        end.setDate(end.getDate() - 1);
+                                        s.startDate = start.toISOString();
+                                        s.endDate = end.toISOString();
+                                        onUpdate(newProject);
+                                    }}
+                                    className="text-xs bg-slate-700 hover:bg-slate-600 px-1 rounded text-slate-300"
+                                    title="Advance 1 Day"
+                                >
+                                    ⏩
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="px-3 py-1 bg-slate-700 rounded text-xs text-slate-300">
                             Ends: {new Date(sprint.endDate).toLocaleDateString()}
                         </div>
@@ -127,23 +169,6 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
                             <span className="text-xl font-mono font-bold text-white leading-none">{daysRemaining}</span>
                             <span className="text-[9px] text-slate-400 uppercase tracking-wider">Days Left</span>
                         </div>
-                    </div>
-                )}
-            </div>
-
-            <div className="flex items-center gap-3">
-                {/* Configuration (Only in Planning) */}
-                {(sprint.status === 'planning' || !sprint.status) && (
-                    <div className="flex items-center gap-2 mr-4 bg-slate-900/50 p-2 rounded-lg">
-                        <span className="text-xs text-slate-400">Duration (Weeks):</span>
-                        <input
-                            type="number"
-                            min="1"
-                            max="6"
-                            value={customDuration}
-                            onChange={(e) => setCustomDuration(parseInt(e.target.value))}
-                            className="w-12 bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm text-center text-white"
-                        />
                     </div>
                 )}
 
