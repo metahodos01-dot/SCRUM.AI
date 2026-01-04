@@ -1,6 +1,7 @@
 import React from 'react';
 import { Project, BurndownSnapshot } from '../../../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { generateSprintReport } from '../../utils/reportGenerator';
 
 interface MonitoringHubProps {
     project: Project;
@@ -83,12 +84,20 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
                         <span>Sprint Burndown</span>
                         <span className="text-sm font-normal text-slate-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">Sprint Goal: {project.phases.sprint?.goal || 'Maximize Value'}</span>
                     </h2>
-                    <button
-                        onClick={handleUpdateBurndown}
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                    >
-                        📸 Capture Daily Snapshot
-                    </button>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => generateSprintReport(project)}
+                            className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-slate-600"
+                        >
+                            📄 Export Report
+                        </button>
+                        <button
+                            onClick={handleUpdateBurndown}
+                            className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                        >
+                            📸 Capture Daily Snapshot
+                        </button>
+                    </div>
                 </div>
 
                 <div className="flex-1 w-full min-h-[300px]">

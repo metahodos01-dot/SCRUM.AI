@@ -11,10 +11,10 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project, onUpdate }) => {
     const sprintStories = project.phases.backlog?.epics.flatMap(e => e.stories).filter(s => s.isInSprint) || [];
 
     const columns = [
-        { id: 'todo', title: 'To Do', color: 'border-slate-500' },
-        { id: 'doing', title: 'In Progress', color: 'border-blue-500' },
-        { id: 'testing', title: 'Testing', color: 'border-purple-500' },
-        { id: 'done', title: 'Done', color: 'border-emerald-500' }
+        { id: 'todo', title: 'To Do', color: 'border-slate-500', limit: 10 },
+        { id: 'doing', title: 'In Progress', color: 'border-blue-500', limit: 3 }, // WIP Limit
+        { id: 'testing', title: 'Testing', color: 'border-purple-500', limit: 2 }, // WIP Limit
+        { id: 'done', title: 'Done', color: 'border-emerald-500', limit: 0 } // No limit
     ];
 
     const getStoriesByStatus = (status: string) => {
@@ -32,6 +32,14 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project, onUpdate }) => {
     const handleDrop = (e: React.DragEvent, newStatus: string) => {
         e.preventDefault();
         const storyId = e.dataTransfer.getData('storyId');
+
+        // CHECK WIP LIMITS
+        const targetColumn = columns.find(c => c.id === newStatus);
+        const currentCount = getStoriesByStatus(newStatus).length;
+        if (targetColumn && targetColumn.limit > 0 && currentCount >= targetColumn.limit) {
+            alert(`WIP Limit Reached! Cannot move more items to ${targetColumn.title} (Limit: ${targetColumn.limit}). Finish existing work first!`);
+            return;
+        }
 
         // Create a deep copy of the project to update state immutably
         const newProject = JSON.parse(JSON.stringify(project)) as Project;
@@ -74,9 +82,19 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project, onUpdate }) => {
                         <div className={`p-4 border-b-2 ${col.color} bg-slate-800/50 rounded-t-xl`}>
                             <h3 className="font-semibold text-slate-200 flex justify-between items-center">
                                 {col.title}
-                                <span className="text-xs bg-slate-700 px-2 py-1 rounded-full text-slate-400">
-                                    {getStoriesByStatus(col.id).length}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    {col.limit > 0 && (
+                                        <span className={`text-xs font-mono font-bold ${getStoriesByStatus(col.id).length >= col.limit ? 'text-red-400' : 'text-slate-500'}`}>
+                                            MAX {col.limit}
+                                        </span>
+                                    )}
+                                    <span className={`text-xs px-2 py-1 rounded-full ${col.limit > 0 && getStoriesByStatus(col.id).length >= col.limit
+                                            ? 'bg-red-900/50 text-red-200 border border-red-500/50'
+                                            : 'bg-slate-700 text-slate-400'
+                                        }`}>
+                                        {getStoriesByStatus(col.id).length}
+                                    </span>
+                                </div>
                             </h3>
                         </div>
 

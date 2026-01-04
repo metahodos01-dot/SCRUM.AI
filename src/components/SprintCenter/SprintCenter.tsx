@@ -12,6 +12,10 @@ interface SprintCenterProps {
 
 type Tab = 'planning' | 'obeya' | 'monitoring' | 'insights';
 
+import SprintControlPanel from './SprintControlPanel';
+
+// ... (existing imports)
+
 const SprintCenter: React.FC<SprintCenterProps> = ({ project, onUpdateProject }) => {
     const [activeTab, setActiveTab] = useState<Tab>('obeya');
 
@@ -54,6 +58,9 @@ const SprintCenter: React.FC<SprintCenterProps> = ({ project, onUpdateProject })
                     ))}
                 </div>
             </div>
+
+            {/* Sprint Control Panel */}
+            <SprintControlPanel project={project} onUpdate={onUpdateProject} />
 
             {/* Main Content Area */}
             <div className="flex-1 overflow-auto rounded-xl bg-slate-800/20 border border-slate-700/30 backdrop-blur-md relative">

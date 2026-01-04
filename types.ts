@@ -135,6 +135,11 @@ export interface SprintData {
   totalEstimatedHours?: number; // Sum of story estimates at start
   businessValueTotal?: number;  // Sum of business value
   status?: 'planning' | 'active' | 'review' | 'completed';
+
+  // Metrics for Report
+  velocity?: number;      // Completed SP
+  throughput?: number;    // Stories completed per week/sprint
+  leadTime?: number;      // Average days from Todo to Done
 }
 
 // Deprecated separate interface in favor of nested SprintData
