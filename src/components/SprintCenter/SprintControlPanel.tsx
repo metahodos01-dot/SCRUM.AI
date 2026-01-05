@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Project, SprintData, SprintStats } from '../../../types';
+import { serverTimestamp } from 'firebase/firestore';
 
 interface SprintControlPanelProps {
     project: Project;
@@ -69,7 +70,7 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
             durationWeeks: customDuration,
             burndownHistory: [], // Reset history
             sprintHistory: history,
-            lastUpdated: Date.now()
+            lastUpdated: serverTimestamp() as any
         };
         onUpdate(newProject);
     };
@@ -87,7 +88,7 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
                         if (story.status.toLowerCase() === 'done') {
                             // Archive: Remove from sprint view, keep as Done
                             story.isInSprint = false;
-                            story.completedAt = Date.now();
+                            story.completedAt = serverTimestamp() as any;
                         } else {
                             // Return to Backlog: Remove from sprint, reset status
                             story.isInSprint = false;
@@ -128,7 +129,7 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
             activeManualImpediments: [],
             endDate: new Date().toISOString(), // Set actual end date
             sprintHistory: history,
-            lastUpdated: Date.now()
+            lastUpdated: serverTimestamp() as any
         };
 
         onUpdate(newProject);
@@ -173,6 +174,7 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
                                         end.setDate(end.getDate() + 1);
                                         s.startDate = start.toISOString();
                                         s.endDate = end.toISOString();
+                                        s.lastUpdated = serverTimestamp() as any;
                                         onUpdate(newProject);
                                     }}
                                     className="text-xs bg-slate-700 hover:bg-slate-600 px-1 rounded text-slate-300"
@@ -192,6 +194,7 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
                                         end.setDate(end.getDate() - 1);
                                         s.startDate = start.toISOString();
                                         s.endDate = end.toISOString();
+                                        s.lastUpdated = serverTimestamp() as any;
                                         onUpdate(newProject);
                                     }}
                                     className="text-xs bg-slate-700 hover:bg-slate-600 px-1 rounded text-slate-300"

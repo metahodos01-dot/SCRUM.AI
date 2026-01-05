@@ -4,9 +4,15 @@
  * This function recursively removes keys with 'undefined' values
  * or converts them to null if specified (default behavior is remove).
  */
+import { FieldValue } from 'firebase/firestore';
+
 export const sanitizeFirestoreData = (data: any): any => {
     if (data === null || data === undefined) {
         return null;
+    }
+
+    if (data instanceof FieldValue) {
+        return data;
     }
 
     if (Array.isArray(data)) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom';
 import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc, doc, onSnapshot, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, onSnapshot, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { Project, User, Epic, UserStory, TeamMember, Impediment, ReleasePlan, MonteCarloResult } from './types';
 import { Layout } from './components/Layout';
@@ -3013,6 +3013,9 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
             updates[`phases.sprint.${key}`] = updatedSprintData[key];
         });
 
+        // Force last updated timestamp
+        updates['phases.sprint.lastUpdated'] = serverTimestamp();
+
         await updateDoc(projectRef, updates);
         setIsEditingEndDate(false);
         alert("Sprint data saved!");
@@ -3061,7 +3064,8 @@ const PhaseSprint = ({ project, onSave }: { project: Project, onSave: (data: any
         // Let's just append. UI will render them in order.
 
         await updateDoc(projectRef, {
-            "phases.sprint.dailyStandups": newDailyStandups
+            "phases.sprint.dailyStandups": newDailyStandups,
+            "phases.sprint.lastUpdated": serverTimestamp()
         });
         alert("Daily Saved! Burndown updated.");
     };

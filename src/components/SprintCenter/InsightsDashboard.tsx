@@ -48,30 +48,41 @@ const InsightsDashboard: React.FC<InsightsDashboardProps> = ({ project }) => {
             // IDEAL Line: Linear decay from Total to 0
             const ideal = totalEstimatedHours - ((totalEstimatedHours / totalDays) * i);
 
-            // REAL Line:
-            // Check if this day is in the past or today relative to NOW
-            const isPastOrToday = date <= now || date.toDateString() === now.toDateString();
+            // REAL Line: Dynamic Calculation based on Story Completion Time
+            // This eliminates reliance on static dailyStandups snapshots.
+            const isFuture = date > now && date.toDateString() !== now.toDateString();
 
             let real: number | null = null;
 
-            // Retrieve from history if available
-            const snapshot = sprint.burndownHistory?.find(s => {
-                const sDate = new Date(s.date);
-                return sDate.toDateString() === date.toDateString();
-            });
+            if (isFuture) {
+                real = null;
+            } else {
+                // Calculate remaining hours at the END of this specific day (graph X axis day)
+                const dayEndOfDay = new Date(date);
+                dayEndOfDay.setHours(23, 59, 59, 999);
 
-            if (snapshot) {
-                real = snapshot.remainingHours;
-            } else if (i === 0) {
-                // Day 0 is always Total
-                real = totalEstimatedHours;
-            } else if (date.toDateString() === now.toDateString()) {
-                // Today: Show current calculated remaining
-                // CRITICAL FIX: Ensure this value is actually Total - Done
-                real = currentRemainingHours;
-            } else if (date < now && !snapshot) {
-                // Gaps in history: For a hard fix, we can either leave null or backfill.
-                // Leaving null is safer for now to avoid inventing data, but ensures the "Today" point is distinct.
+                const completedEstimateUntilThisDay = stories.reduce((sum, story) => {
+                    const isDone = story.status.toLowerCase() === 'done';
+                    if (!isDone || !story.completedAt) return sum;
+
+                    let completedTime = 0;
+                    // Handle Firestore Timestamp, number, string, or Date
+                    const cAt = story.completedAt as any;
+                    if (typeof cAt === 'number') {
+                        completedTime = cAt;
+                    } else if (typeof cAt?.toDate === 'function') {
+                        completedTime = cAt.toDate().getTime();
+                    } else if (cAt instanceof Date) {
+                        completedTime = cAt.getTime();
+                    } else if (typeof cAt === 'string') {
+                        completedTime = new Date(cAt).getTime();
+                    }
+
+                    // If story was completed ON or BEFORE this day, it counts as burned
+                    return completedTime <= dayEndOfDay.getTime() ? sum + story.estimatedHours : sum;
+                }, 0);
+
+                real = Math.max(0, totalEstimatedHours - completedEstimateUntilThisDay);
             }
 
             dataPoints.push({
