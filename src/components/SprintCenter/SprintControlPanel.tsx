@@ -68,27 +68,48 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
     };
 
     const handleEndSprint = () => {
-        if (!confirm("Are you sure you want to end the Sprint? This will calculate final metrics.")) return;
+        if (!confirm("Are you sure you want to end the Sprint? This will archive DONE items and reset others.")) return;
 
         const newProject = JSON.parse(JSON.stringify(project)) as Project;
-        const sprintStories = newProject.phases.backlog?.epics.flatMap(e => e.stories).filter(s => s.isInSprint) || [];
 
-        // Calculate Metrics
-        const completedStories = sprintStories.filter(s => s.status === 'done');
+        // 1. Process Stories (Clean Sync)
+        if (newProject.phases.backlog?.epics) {
+            newProject.phases.backlog.epics.forEach(epic => {
+                epic.stories.forEach(story => {
+                    if (story.isInSprint) {
+                        if (story.status.toLowerCase() === 'done') {
+                            // Archive: Remove from sprint view, keep as Done
+                            story.isInSprint = false;
+                            story.completedAt = Date.now();
+                        } else {
+                            // Return to Backlog: Remove from sprint, reset status
+                            story.isInSprint = false;
+                            story.status = 'todo';
+                        }
+                    }
+                });
+            });
+        }
+
+        const sprintStories = project.phases.backlog?.epics.flatMap(e => e.stories).filter(s => s.isInSprint) || [];
+        const completedStories = sprintStories.filter(s => s.status.toLowerCase() === 'done');
+
+        // 2. Metrics Capture (Persist in history before reset? Ideally we'd archive the whole sprint object)
         const velocity = completedStories.reduce((acc, s) => acc + s.storyPoints, 0);
         const throughput = completedStories.length;
+        const leadTime = 0; // Placeholder for future logic
 
-        // Simple Lead Time Calc (Mock: assume random 2-5 days for now if no timestamps, or 0)
-        // In real app, we'd use story.createdAt vs story.completedAt
-        const leadTime = completedStories.length > 0 ? 3.5 : 0;
-
+        // 3. Reset Sprint State
         newProject.phases.sprint = {
             ...newProject.phases.sprint,
             isActive: false,
             status: 'completed',
             velocity,
             throughput,
-            leadTime
+            leadTime,
+            aiAlerts: [], // Clear alerts
+            activeManualImpediments: [],
+            endDate: new Date().toISOString() // Set actual end date
         };
 
         onUpdate(newProject);

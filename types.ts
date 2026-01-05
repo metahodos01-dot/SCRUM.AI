@@ -147,12 +147,21 @@ export interface SprintData {
   impediments?: Impediment[];
   dailyMeetingDuration?: number; // Minutes, defaults to 15
   review?: string;
-  retrospective?: string;
+  dailyMeetingDuration?: number; // Minutes, defaults to 15
+  review?: string;
+  // Retro Schema Upgrade
+  retrospective?: {
+    good: string[];
+    bad: string[];
+    actions: string[];
+  };
   dailyStandups?: { dayIndex: number; remainingHours: number; timestamp: number }[];
 
   // Sprint Center additions
   burndownHistory?: BurndownSnapshot[];
+  burndownHistory?: BurndownSnapshot[];
   aiAlerts?: SprintAiAlert[];
+  activeManualImpediments?: string[]; // IDs from Impediment Library
   totalCapacity?: number;     // Total adjustable hours for the sprint
   totalEstimatedHours?: number; // Sum of story estimates at start
   businessValueTotal?: number;  // Sum of business value

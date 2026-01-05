@@ -298,11 +298,50 @@ export const generateWordReport = async (project: Project) => {
         });
     }
 
-    // 5. Risks (Obeya)
+    // 5. Agile Retrospective & Impediments (NEW)
+    const retroSection = [
+        new Paragraph({
+            text: "4. Retrospective & Impediments",
+            heading: HeadingLevel.HEADING_1,
+            pageBreakBefore: true,
+        }),
+        new Paragraph({ text: "Impediments Encountered", heading: HeadingLevel.HEADING_2 }),
+        createTable([
+            ["Impediment Type", "Status"],
+            ...(project.phases.sprint?.activeManualImpediments?.map(id => {
+                const label = ["Mancanza Stakeholder", "Debito Tecnico", "Requisiti Ambigui", "Sovraccarico", "Problemi Ambiente", "Skill Gap"].find(l => {
+                    // Quick Map based on checking ID logic or hardcoding map. 
+                    // Better to hardcode map here for report consistency or export constant.
+                    if (id.includes('stakeholder')) return "Mancanza Stakeholder";
+                    if (id.includes('tech-debt')) return "Debito Tecnico";
+                    if (id.includes('wip')) return "Sovraccarico";
+                    return id;
+                }) || id;
+                return [label, "Reported"];
+            }) || [["No impediments reported", "-"]])
+        ]),
+
+        new Paragraph({ text: "Retrospective Summary", heading: HeadingLevel.HEADING_2, spacing: { before: 200 } }),
+
+        // Good
+        new Paragraph({ text: "What went well?", heading: HeadingLevel.HEADING_3 }),
+        ...(project.phases.sprint?.retrospective?.good?.map(t => new Paragraph({ text: `• ${t}`, spacing: { after: 60 } })) || [new Paragraph({ text: "Nothing recorded", italics: true })]),
+
+        // Bad
+        new Paragraph({ text: "What didn't go well?", heading: HeadingLevel.HEADING_3, spacing: { before: 120 } }),
+        ...(project.phases.sprint?.retrospective?.bad?.map(t => new Paragraph({ text: `• ${t}`, spacing: { after: 60 } })) || [new Paragraph({ text: "Nothing recorded", italics: true })]),
+
+        // Actions
+        new Paragraph({ text: "Action Items (Improvements)", heading: HeadingLevel.HEADING_3, spacing: { before: 120 } }),
+        ...(project.phases.sprint?.retrospective?.actions?.map(t => new Paragraph({ text: `• ${t} (Owner: Team)`, spacing: { after: 60 }, bold: true })) || [new Paragraph({ text: "No actions defined", italics: true })]),
+    ];
+
+    // 6. Risks (Obeya) - Renumbered to 5 if needed, but let's keep as 5/6
     const risksSection = [
         new Paragraph({
-            text: "4. Risks & Impediments",
+            text: "5. Strategic Risks",
             heading: HeadingLevel.HEADING_1,
+            pageBreakBefore: true,
         }),
         createTable([
             ["Risk Description", "Impact", "Mitigation"],
@@ -356,6 +395,7 @@ export const generateWordReport = async (project: Project) => {
                     ...teamSection,
                     ...hierarchySection,
                     ...metricsSection,
+                    ...retroSection,
                     ...risksSection
                 ],
             },
