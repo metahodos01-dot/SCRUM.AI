@@ -1,4 +1,3 @@
-```
 import React, { useMemo, useState, useEffect } from 'react';
 import { Project, BurndownSnapshot } from '../../../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
@@ -93,7 +92,7 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
         }
 
         return {
-            day: `Day ${ i } `,
+            day: `Day ${i} `,
             ideal: Math.round(ideal),
             real: real,
         };
@@ -190,14 +189,12 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
                                 if (isResolved) return null; // Logic: Hide resolved items or show in separate list? decision: Hide for focus
 
                                 return (
-                                    <div key={alert.id} className={`rounded - lg p - 4 border transition - all ${
-    alert.severity === 'high' ? 'bg-red-900/10 border-red-500/50 hover:bg-red-900/20' :
-    'bg-amber-900/10 border-amber-500/50 hover:bg-amber-900/20'
-} `}>
+                                    <div key={alert.id} className={`rounded - lg p - 4 border transition - all ${alert.severity === 'high' ? 'bg-red-900/10 border-red-500/50 hover:bg-red-900/20' :
+                                            'bg-amber-900/10 border-amber-500/50 hover:bg-amber-900/20'
+                                        } `}>
                                         <div className="flex justify-between items-start mb-2">
-                                            <h4 className={`font - bold text - sm flex items - center gap - 2 ${
-    alert.severity === 'high' ? 'text-red-400' : 'text-amber-400'
-} `}>
+                                            <h4 className={`font - bold text - sm flex items - center gap - 2 ${alert.severity === 'high' ? 'text-red-400' : 'text-amber-400'
+                                                } `}>
                                                 {alert.severity === 'high' ? '⚠️' : '✋'} {alert.message}
                                             </h4>
                                             <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
