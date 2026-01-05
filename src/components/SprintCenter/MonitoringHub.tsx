@@ -199,8 +199,51 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
             </div>
 
             {/* AI SIDEBAR (Existing Logic) */}
+            {/* AI SIDEBAR & STATS */}
             <div className="w-80 flex flex-col gap-4">
-                <div className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50 h-full overflow-y-auto">
+                {/* Statistics Section (NEW) */}
+                <div className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50 shrink-0">
+                    <h3 className="font-semibold text-slate-100 mb-3 flex items-center gap-2">
+                        <span>📊</span> Statistics
+                    </h3>
+                    <div className="space-y-2 text-sm text-slate-400">
+                        <div className="flex justify-between items-center">
+                            <span>Current Sprint:</span>
+                            <span className="text-white font-bold bg-slate-700 px-2 py-0.5 rounded">#{project.phases.sprint?.number || 1}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span>Last Update:</span>
+                            <span className="text-emerald-400 font-mono text-xs flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                {project.phases.sprint?.lastUpdated
+                                    ? new Date(project.phases.sprint.lastUpdated).toLocaleTimeString()
+                                    : 'Syncing...'}
+                            </span>
+                        </div>
+
+                        {/* Historical Chart mini-viz */}
+                        <div className="pt-2 border-t border-slate-700/50 mt-2">
+                            <span className="text-[10px] uppercase font-bold text-slate-500">History (Velocity)</span>
+                            <div className="flex items-end gap-1 h-16 mt-2 bg-slate-900/30 rounded pl-1 pb-1 pt-4 border-b border-l border-slate-700/30">
+                                {(project.phases.sprint?.sprintHistory || []).slice(-5).length > 0 ? (project.phases.sprint?.sprintHistory || []).slice(-5).map((h, i) => (
+                                    <div key={i} className="flex-1 bg-indigo-500/60 hover:bg-indigo-400 transition-all relative group rounded-t-sm" style={{ height: `${Math.min(100, Math.max(10, (h.velocity / 30) * 100))}%` }}>
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-slate-900 border border-slate-700 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-20 shadow-xl">
+                                            <div className="font-bold text-indigo-300">Sprint #{h.number}</div>
+                                            <div>Vel: {h.velocity}</div>
+                                            <div>Thr: {h.throughput}</div>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[10px] italic text-slate-600">
+                                        No history yet
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50 flex-1 overflow-y-auto">
                     <h3 className="font-semibold text-indigo-400 mb-4 flex items-center justify-between sticky top-0 bg-slate-900/80 backdrop-blur py-2 z-10">
                         <span className="flex items-center gap-2"><span className="animate-pulse">🤖</span> AI Pulse</span>
                         <span className="text-xs bg-slate-800 border border-slate-700 px-2 py-0.5 rounded text-slate-400">

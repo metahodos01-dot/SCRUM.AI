@@ -134,6 +134,15 @@ export interface Impediment {
   status: 'open' | 'resolved';
 }
 
+export interface SprintStats {
+  number: number;
+  velocity: number;
+  throughput: number;
+  startDate: string;
+  endDate: string;
+  goal: string;
+}
+
 export interface SprintData {
   isActive: boolean;
   number: number;
@@ -168,6 +177,8 @@ export interface SprintData {
   velocity?: number;      // Completed SP
   throughput?: number;    // Stories completed per week/sprint
   leadTime?: number;      // Average days from Todo to Done
+  sprintHistory?: SprintStats[];
+  lastUpdated?: number;
 }
 
 // Deprecated separate interface in favor of nested SprintData

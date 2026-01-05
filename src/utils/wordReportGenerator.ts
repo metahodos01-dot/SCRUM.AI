@@ -94,8 +94,8 @@ export const generateWordReport = async (project: Project) => {
             text: "1. Vision & Strategy",
             heading: HeadingLevel.HEADING_1,
         }),
-        createKeyValue("Vision", project.phases.vision?.text || "Not defined"),
-        createKeyValue("Objectives", project.phases.objectives?.text || "Not defined"),
+        createKeyValue("Vision", stripHtml(project.phases.vision?.text) || "Not defined"),
+        createKeyValue("Objectives", stripHtml(project.phases.objectives?.text) || "Not defined"),
         new Paragraph({ text: "Key Performance Indicators (KPIs):", heading: HeadingLevel.HEADING_2 }),
         createTable([
             ["Metric", "Value", "Target"],
@@ -147,7 +147,7 @@ export const generateWordReport = async (project: Project) => {
         );
         hierarchySection.push(
             new Paragraph({
-                children: [new TextRun({ text: epic.description || "No description" })],
+                children: [new TextRun({ text: stripHtml(epic.description) || "No description" })],
                 style: "Normal",
                 spacing: { after: 120 },
             })
@@ -218,7 +218,6 @@ export const generateWordReport = async (project: Project) => {
     }
 
     function createStoriesTable(stories: UserStory[]) {
-        // Flatten rows to include logs
         const rows: TableRow[] = [
             new TableRow({
                 children: ["ID", "Story", "Status", "Est (hr)", "Assigned"].map(h => new TableCell({
@@ -229,7 +228,6 @@ export const generateWordReport = async (project: Project) => {
         ];
 
         stories.forEach(s => {
-            // Main Story Row
             const assignedNames = (s.assignedTo || s.assigneeIds || [])
                 .map(id => project.phases.team?.members.find(m => m.id === id)?.name || "Unknown")
                 .join(", ");
@@ -237,54 +235,37 @@ export const generateWordReport = async (project: Project) => {
             rows.push(new TableRow({
                 children: [
                     new TableCell({ children: [new Paragraph(s.id)] }),
-                    new TableCell({ children: [new Paragraph(s.title)] }),
+                    new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: s.title, bold: true })] })] }),
                     new TableCell({ children: [new Paragraph(s.status)] }),
                     new TableCell({ children: [new Paragraph(s.estimatedHours.toString())] }),
                     new TableCell({ children: [new Paragraph(assignedNames || "-")] }),
                 ]
             }));
 
-            // Time Logs Sub-row (if any)
-            if (s.timeLogs && s.timeLogs.length > 0) {
-                const logText = s.timeLogs.map(l => {
-                    const memberName = project.phases.team?.members.find(m => m.id === l.memberId)?.name || "Unknown";
-                    return `${new Date(l.date).toLocaleDateString()}: -${l.hours}h (${memberName})`;
-                }).join("\n");
+            // Detatils Sub-row (Description + AC)
+            const cleanDesc = stripHtml(s.description);
+            const acLines = Array.isArray(s.acceptanceCriteria) ? s.acceptanceCriteria : (typeof s.acceptanceCriteria === 'string' ? (s.acceptanceCriteria as string).split('\n') : []);
 
+            if (cleanDesc || acLines.length > 0) {
                 rows.push(new TableRow({
                     children: [
                         new TableCell({
                             children: [
-                                new Paragraph({
-                                    children: [new TextRun({ text: "Work Logs:", bold: true, size: 20 })]
-                                }),
-                                new Paragraph({
-                                    children: [new TextRun({ text: logText, size: 18, color: "666666" })]
-                                })
+                                ...(cleanDesc ? [
+                                    new Paragraph({ children: [new TextRun({ text: "Description:", bold: true, size: 20, color: "444444" })] }),
+                                    new Paragraph({ children: [new TextRun({ text: cleanDesc, size: 20 })], spacing: { after: 100 } })
+                                ] : []),
+                                ...(acLines.length > 0 ? [
+                                    new Paragraph({ children: [new TextRun({ text: "Acceptance Criteria:", bold: true, size: 20, color: "444444" })] }),
+                                    ...acLines.map(ac => new Paragraph({
+                                        children: [new TextRun({ text: stripHtml(ac), size: 20 })],
+                                        bullet: { level: 0 }
+                                    }))
+                                ] : [])
                             ],
                             columnSpan: 5,
-                            shading: { fill: "FAFAFA" }
-                        })
-                    ]
-                }));
-            }
-
-            // Tasks Sub-row (if any)
-            if (s.tasks && s.tasks.length > 0) {
-                const taskText = s.tasks.map(t => `• [${t.status}] ${t.description} (${t.hoursRemaining}h)`).join("\n");
-                rows.push(new TableRow({
-                    children: [
-                        new TableCell({
-                            children: [
-                                new Paragraph({
-                                    children: [new TextRun({ text: "Tasks:", bold: true, size: 20 })]
-                                }),
-                                new Paragraph({
-                                    children: [new TextRun({ text: taskText, size: 18, color: "666666" })]
-                                })
-                            ],
-                            columnSpan: 5,
-                            shading: { fill: "FFFFF0" } // Slightly different shade for tasks
+                            shading: { fill: "FFFFFF" }, // White background for content
+                            margins: { left: 100, top: 100, bottom: 100 }
                         })
                     ]
                 }));
@@ -293,7 +274,6 @@ export const generateWordReport = async (project: Project) => {
 
         return new Table({
             width: { size: 100, type: WidthType.PERCENTAGE },
-            indent: { size: 720, type: WidthType.DXA },
             rows: rows
         });
     }
@@ -445,4 +425,14 @@ function createTable(rows: string[][]) {
             })
         )
     });
+}
+function stripHtml(html: string | undefined | null | any): string {
+    if (!html || typeof html !== 'string') return "";
+    return html
+        .replace(/<[^>]*>/g, "")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .trim();
 }

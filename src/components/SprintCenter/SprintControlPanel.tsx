@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Project, SprintData } from '../../../types';
+import { Project, SprintData, SprintStats } from '../../../types';
 
 interface SprintControlPanelProps {
     project: Project;
@@ -55,14 +55,21 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
         const endDate = new Date();
         endDate.setDate(now.getDate() + (customDuration * 7)); // Simple weeks calculation
 
+        const history = newProject.phases.sprint.sprintHistory || [];
+        const lastNumber = history.length > 0 ? history[history.length - 1].number : (newProject.phases.sprint.number || 0);
+        const nextNumber = lastNumber + 1;
+
         newProject.phases.sprint = {
             ...newProject.phases.sprint,
             isActive: true,
             status: 'active',
+            number: nextNumber,
             startDate: now.toISOString(),
             endDate: endDate.toISOString(),
             durationWeeks: customDuration,
-            burndownHistory: [] // Reset history
+            burndownHistory: [], // Reset history
+            sprintHistory: history,
+            lastUpdated: Date.now()
         };
         onUpdate(newProject);
     };
@@ -99,7 +106,17 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
         const throughput = completedStories.length;
         const leadTime = 0; // Placeholder for future logic
 
-        // 3. Reset Sprint State
+        // 3. Save History & Reset
+        const history = newProject.phases.sprint.sprintHistory || [];
+        history.push({
+            number: project.phases.sprint.number,
+            velocity,
+            throughput,
+            startDate: project.phases.sprint.startDate,
+            endDate: new Date().toISOString(),
+            goal: project.phases.sprint.goal
+        });
+
         newProject.phases.sprint = {
             ...newProject.phases.sprint,
             isActive: false,
@@ -109,7 +126,9 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
             leadTime,
             aiAlerts: [], // Clear alerts
             activeManualImpediments: [],
-            endDate: new Date().toISOString() // Set actual end date
+            endDate: new Date().toISOString(), // Set actual end date
+            sprintHistory: history,
+            lastUpdated: Date.now()
         };
 
         onUpdate(newProject);
