@@ -185,11 +185,16 @@ export interface BurndownSnapshot {
 
 export interface SprintAiAlert {
   id: string;
-  type: 'bottleneck' | 'capacity' | 'risk';
-  message: string;
+  type: 'bottleneck' | 'capacity' | 'risk' | 'stagnation' | 'divergence';
+  message: string; // Title
+  description?: string; // Detailed description
+  suggestion: string;
   detectedAt: number;
   relatedEntityId?: string; // Story ID or Member ID
   severity: 'low' | 'medium' | 'high';
+  status: 'open' | 'resolving' | 'resolved';
+  resolvedAt?: number;
+  actionTaken?: string;
 }
 
 export interface Task {

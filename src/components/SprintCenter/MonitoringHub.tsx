@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+```
+import React, { useMemo, useState, useEffect } from 'react';
 import { Project, BurndownSnapshot } from '../../../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { generateSprintReport } from '../../utils/reportGenerator';
@@ -27,6 +28,30 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
 
     // AI Detection
     const alerts = useMemo(() => detectImpediments(project), [project]);
+
+    // Auto-persist new alerts to preserve 'detectedAt' timeline
+    useEffect(() => {
+        if (!project.phases.sprint?.isActive) return;
+
+        const currentAlerts = project.phases.sprint.aiAlerts || [];
+        const newAlerts = alerts.filter(a => !currentAlerts.find(ca => ca.id === a.id));
+
+        if (newAlerts.length > 0) {
+            const updatedProject = JSON.parse(JSON.stringify(project));
+            if (!updatedProject.phases.sprint.aiAlerts) updatedProject.phases.sprint.aiAlerts = [];
+
+            // Push new alerts
+            newAlerts.forEach(na => updatedProject.phases.sprint.aiAlerts.push(na));
+
+            // Debounce update? relying on parent for now, but to be safe:
+            // calling onUpdate immediately might cause render loop if unrelated changes happen.
+            // But since 'alerts' depends on 'project', updating 'project' will re-run 'detectImpediments'.
+            // 'detectImpediments' checks existing alerts. So next run, 'newAlerts' will be empty.
+            // This should be stable.
+            onUpdate(updatedProject);
+        }
+    }, [alerts, project.phases.sprint?.aiAlerts]); // Check specifically against saved alerts
+
 
     // 2. Generate Full Axis (Day 0 to Day N)
     const chartData = Array.from({ length: totalDays + 1 }, (_, i) => {
@@ -68,7 +93,7 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
         }
 
         return {
-            day: `Day ${i}`,
+            day: `Day ${ i } `,
             ideal: Math.round(ideal),
             real: real,
         };
@@ -146,58 +171,87 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
                 </div>
             </div>
 
-            {/* AI Alert Sidebar (Problem Solving) */}
-            <div className="w-80 flex flex-col gap-4">
+            {/* AI Alert Console (Problem Solving) */}
+            <div className="w-96 flex flex-col gap-4">
                 <div className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/50 h-full overflow-y-auto">
-                    <h3 className="font-semibold text-indigo-400 mb-4 flex items-center gap-2 sticky top-0 bg-slate-900/80 backdrop-blur py-2 z-10">
-                        <span className="animate-pulse">🤖</span> Problem Solving AI
+                    <h3 className="font-semibold text-indigo-400 mb-4 flex items-center justify-between sticky top-0 bg-slate-900/80 backdrop-blur py-2 z-10">
+                        <span className="flex items-center gap-2"><span className="animate-pulse">🤖</span> Problem Solving AI</span>
+                        <span className="text-xs bg-slate-800 border border-slate-700 px-2 py-0.5 rounded text-slate-400">
+                            {alerts.filter(a => a.status !== 'resolved').length} Active
+                        </span>
                     </h3>
 
                     {alerts.length > 0 ? (
                         <div className="space-y-3">
-                            {alerts.map(alert => (
-                                <div key={alert.id} className={`rounded-lg p-4 border ${alert.severity === 'high' ? 'bg-red-900/20 border-red-500/50' :
-                                        alert.severity === 'medium' ? 'bg-amber-900/20 border-amber-500/50' :
-                                            'bg-blue-900/20 border-blue-500/50'
-                                    }`}>
-                                    <h4 className={`font-bold text-sm mb-1 flex items-center gap-2 ${alert.severity === 'high' ? 'text-red-400' :
-                                            alert.severity === 'medium' ? 'text-amber-400' :
-                                                'text-blue-400'
-                                        }`}>
-                                        {alert.severity === 'high' && <span className="text-lg">⚠️</span>}
-                                        {alert.title}
-                                    </h4>
-                                    <p className="text-slate-300 text-xs leading-relaxed mb-3">
-                                        {alert.description}
-                                    </p>
-                                    <div className="bg-slate-900/50 p-2 rounded border border-white/5">
-                                        <p className="text-xs text-slate-400 italic">
-                                            <span className="font-bold not-italic text-indigo-300">Suggestion:</span> {alert.suggestion}
+                            {alerts.map(alert => {
+                                const isResolved = alert.status === 'resolved';
+                                const durationHrs = Math.round((Date.now() - alert.detectedAt) / (1000 * 60 * 60));
+
+                                if (isResolved) return null; // Logic: Hide resolved items or show in separate list? decision: Hide for focus
+
+                                return (
+                                    <div key={alert.id} className={`rounded - lg p - 4 border transition - all ${
+    alert.severity === 'high' ? 'bg-red-900/10 border-red-500/50 hover:bg-red-900/20' :
+    'bg-amber-900/10 border-amber-500/50 hover:bg-amber-900/20'
+} `}>
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h4 className={`font - bold text - sm flex items - center gap - 2 ${
+    alert.severity === 'high' ? 'text-red-400' : 'text-amber-400'
+} `}>
+                                                {alert.severity === 'high' ? '⚠️' : '✋'} {alert.message}
+                                            </h4>
+                                            <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                                                {durationHrs}h Active
+                                            </span>
+                                        </div>
+
+                                        <p className="text-slate-300 text-xs leading-relaxed mb-3">
+                                            {alert.description}
                                         </p>
+
+                                        <div className="bg-slate-900/50 p-2.5 rounded border border-white/5 mb-3">
+                                            <p className="text-xs text-slate-400 italic flex gap-2">
+                                                <span>💡</span>
+                                                <span>{alert.suggestion}</span>
+                                            </p>
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    // Handle Resolution Logic (Optimistic update for now, real implementation would update project)
+                                                    const newProject = JSON.parse(JSON.stringify(project));
+                                                    if (!newProject.phases.sprint.aiAlerts) newProject.phases.sprint.aiAlerts = [];
+
+                                                    const existingIndex = newProject.phases.sprint.aiAlerts.findIndex((a: any) => a.id === alert.id);
+                                                    if (existingIndex >= 0) {
+                                                        newProject.phases.sprint.aiAlerts[existingIndex].status = 'resolved';
+                                                        newProject.phases.sprint.aiAlerts[existingIndex].resolvedAt = Date.now();
+                                                    } else {
+                                                        // If it came from detector but wasn't in state yet, add it as resolved
+                                                        newProject.phases.sprint.aiAlerts.push({ ...alert, status: 'resolved', resolvedAt: Date.now() });
+                                                    }
+                                                    onUpdate(newProject);
+                                                }}
+                                                className="flex-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 text-xs py-1.5 rounded border border-emerald-500/30 transition-colors flex items-center justify-center gap-1"
+                                            >
+                                                <span>✅</span> Mark Resolved
+                                            </button>
+                                            <button className="flex-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs py-1.5 rounded border border-indigo-500/30 transition-colors flex items-center justify-center gap-1">
+                                                <span>🚀</span> Action
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     ) : (
-                        <div className="bg-emerald-900/10 border border-emerald-500/20 rounded-lg p-4 text-center py-8">
-                            <div className="text-4xl mb-3">✅</div>
-                            <p className="text-emerald-400 text-sm font-medium">System Clear</p>
-                            <p className="text-slate-500 text-xs mt-1">No major impediments detected.</p>
+                        <div className="bg-emerald-900/10 border border-emerald-500/20 rounded-lg p-6 text-center">
+                            <div className="text-4xl mb-3 opacity-80">🛡️</div>
+                            <p className="text-emerald-400 text-sm font-bold">Fail Safe Active</p>
+                            <p className="text-slate-500 text-xs mt-1">No impediments affecting flow.</p>
                         </div>
                     )}
-
-                    <div className="mt-6 border-t border-slate-700 pt-4">
-                        <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Live Metrics</h4>
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-400">Total Remaining</span>
-                                <span className="text-white font-mono">
-                                    {project.phases.backlog?.epics.flatMap(e => e.stories).filter(s => s.isInSprint)
-                                        .reduce((acc, s) => acc + (s.status === 'DONE' ? 0 : s.estimatedHours), 0)}h
-                                </span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
