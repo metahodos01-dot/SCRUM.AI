@@ -325,15 +325,15 @@ export const generateWordReport = async (project: Project) => {
 
         // Good
         new Paragraph({ text: "What went well?", heading: HeadingLevel.HEADING_3 }),
-        ...(project.phases.sprint?.retrospective?.good?.map(t => new Paragraph({ text: `• ${t}`, spacing: { after: 60 } })) || [new Paragraph({ text: "Nothing recorded", italics: true })]),
+        ...(project.phases.sprint?.retrospective?.good?.map(t => new Paragraph({ text: `• ${t}`, spacing: { after: 60 } })) || [new Paragraph({ children: [new TextRun({ text: "Nothing recorded", italics: true })] })]),
 
         // Bad
         new Paragraph({ text: "What didn't go well?", heading: HeadingLevel.HEADING_3, spacing: { before: 120 } }),
-        ...(project.phases.sprint?.retrospective?.bad?.map(t => new Paragraph({ text: `• ${t}`, spacing: { after: 60 } })) || [new Paragraph({ text: "Nothing recorded", italics: true })]),
+        ...(project.phases.sprint?.retrospective?.bad?.map(t => new Paragraph({ text: `• ${t}`, spacing: { after: 60 } })) || [new Paragraph({ children: [new TextRun({ text: "Nothing recorded", italics: true })] })]),
 
         // Actions
         new Paragraph({ text: "Action Items (Improvements)", heading: HeadingLevel.HEADING_3, spacing: { before: 120 } }),
-        ...(project.phases.sprint?.retrospective?.actions?.map(t => new Paragraph({ text: `• ${t} (Owner: Team)`, spacing: { after: 60 }, bold: true })) || [new Paragraph({ text: "No actions defined", italics: true })]),
+        ...(project.phases.sprint?.retrospective?.actions?.map(t => new Paragraph({ children: [new TextRun({ text: `• ${t} (Owner: Team)`, bold: true })], spacing: { after: 60 } })) || [new Paragraph({ children: [new TextRun({ text: "No actions defined", italics: true })] })]),
     ];
 
     // 6. Risks (Obeya) - Renumbered to 5 if needed, but let's keep as 5/6

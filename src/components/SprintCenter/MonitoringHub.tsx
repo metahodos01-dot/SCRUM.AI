@@ -1,11 +1,3 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { Project } from '../../../types';
-import { detectImpediments } from '../../utils/aiImpedimentDetector';
-
-interface MonitoringHubProps {
-    project: Project;
-    onUpdate: (project: Project) => void;
-}
 
 // MonitoringHub.tsx - V3 (Problem Solving & Retrospective)
 import React, { useMemo, useState, useEffect } from 'react';
@@ -255,7 +247,5 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
         </div>
     );
 };
-
-export default MonitoringHub;
 
 export default MonitoringHub;

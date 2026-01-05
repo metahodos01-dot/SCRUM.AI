@@ -147,8 +147,6 @@ export interface SprintData {
   impediments?: Impediment[];
   dailyMeetingDuration?: number; // Minutes, defaults to 15
   review?: string;
-  dailyMeetingDuration?: number; // Minutes, defaults to 15
-  review?: string;
   // Retro Schema Upgrade
   retrospective?: {
     good: string[];
@@ -158,7 +156,6 @@ export interface SprintData {
   dailyStandups?: { dayIndex: number; remainingHours: number; timestamp: number }[];
 
   // Sprint Center additions
-  burndownHistory?: BurndownSnapshot[];
   burndownHistory?: BurndownSnapshot[];
   aiAlerts?: SprintAiAlert[];
   activeManualImpediments?: string[]; // IDs from Impediment Library
