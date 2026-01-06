@@ -151,8 +151,15 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
             };
 
             // --- 2. Build Batch ---
+
+            // SANITIZATION: Firebase does not accept 'undefined'.
+            // We strip undefined properties or convert them to null using the user-provided protocol.
+            console.log("Raw Data to be saved:", newProject);
+            const sanitizedProject = JSON.parse(JSON.stringify(newProject, (k, v) => v === undefined ? null : v));
+            console.log("Sanitized Data (ready for Batch):", sanitizedProject);
+
             // Operation 1: Update the monolith project document
-            batch.set(projectRef, newProject, { merge: true });
+            batch.set(projectRef, sanitizedProject, { merge: true });
 
             // Operation 2: Update Metadata (Source of Truth)
             // We use increment(1) if possible, but reading first is safer for sync if we relied on doc read.
