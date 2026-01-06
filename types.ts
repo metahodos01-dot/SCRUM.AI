@@ -103,16 +103,19 @@ export interface UserStory {
   title: string;
   description: string;
   acceptanceCriteria: string[];
+  priority: 'low' | 'medium' | 'high';
   storyPoints: number;
+  assignedTo?: string[]; // Array of Team Member IDs
+  sprintId?: string | null;
+  archived?: boolean;
+  isInSprint: boolean;
   estimatedHours: number; // Current remaining effort
   originalEstimate?: number; // Baseline effort (for reference)
   status: 'todo' | 'doing' | 'testing' | 'done' | 'In Progress' | 'Testing';
   assigneeIds?: string[]; // Deprecated in favor of assignedTo but kept for backward compat if needed
-  assignedTo?: string[]; // Array of Team Member IDs
   timeLogs?: TimeLog[];
-  isInSprint?: boolean;
   completedAt?: number;
-  priority: number;
+
   detailLevel: 'high' | 'medium' | 'low';
   businessValue?: number;
   tasks?: Task[]; // Audit: Added for Hierarchy Report

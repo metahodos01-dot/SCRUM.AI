@@ -50,7 +50,9 @@ const ExecutiveObeya: React.FC<ExecutiveObeyaProps> = ({ project }) => {
                     <p className="text-orange-500 font-bold text-xs uppercase tracking-widest mb-1">Last Update</p>
                     <p className="text-slate-300 font-mono text-sm">
                         {project.phases.sprint?.lastUpdated
-                            ? new Date(project.phases.sprint.lastUpdated).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                            ? (typeof project.phases.sprint.lastUpdated.toDate === 'function'
+                                ? project.phases.sprint.lastUpdated.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+                                : new Date(project.phases.sprint.lastUpdated).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }))
                             : 'Syncing...'}
                     </p>
                 </div>

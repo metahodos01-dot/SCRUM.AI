@@ -206,6 +206,9 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
                     <h3 className="font-semibold text-slate-100 mb-3 flex items-center gap-2">
                         <span>📊</span> Statistics
                     </h3>
+                    <div className="mb-4">
+                        <div className="text-2xl font-bold text-blue-500">SPRINT ATTUALE: #{project.phases.sprint?.number || 1}</div>
+                    </div>
                     <div className="space-y-2 text-sm text-slate-400">
                         <div className="flex justify-between items-center">
                             <span>Current Sprint:</span>
@@ -216,7 +219,9 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
                             <span className="text-emerald-400 font-mono text-xs flex items-center gap-1">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                                 {project.phases.sprint?.lastUpdated
-                                    ? new Date(project.phases.sprint.lastUpdated).toLocaleTimeString()
+                                    ? (typeof project.phases.sprint.lastUpdated.toDate === 'function'
+                                        ? project.phases.sprint.lastUpdated.toDate().toLocaleTimeString()
+                                        : new Date(project.phases.sprint.lastUpdated).toLocaleTimeString())
                                     : 'Syncing...'}
                             </span>
                         </div>

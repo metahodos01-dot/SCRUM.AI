@@ -3638,10 +3638,36 @@ const ProjectManager = () => {
 
     useEffect(() => {
         if (!projectId) return;
-        const unsubscribe = onSnapshot(doc(db, "projects", projectId), (doc) => {
-            setProject({ id: doc.id, ...doc.data() } as Project);
+
+        let localProject: Project | null = null;
+
+        const unsubscribeProject = onSnapshot(doc(db, "projects", projectId), (docSnap) => {
+            if (docSnap.exists()) {
+                localProject = { id: docSnap.id, ...docSnap.data() } as Project;
+                setProject(prev => localProject); // Update state
+            }
         });
-        return () => unsubscribe();
+
+        // CRITICAL RECOVERY: Listen to sprint_metadata for definitive Truth
+        const unsubscribeMetadata = onSnapshot(doc(db, 'projects', projectId, 'metadata', 'sprint_config'), (metaSnap) => {
+            if (metaSnap.exists() && localProject) {
+                const meta = metaSnap.data();
+                setProject(prev => {
+                    if (!prev) return null;
+                    const merged = { ...prev };
+                    if (!merged.phases.sprint) merged.phases.sprint = {} as any;
+                    // Force overwrite from metadata
+                    if (meta.current_sprint_number !== undefined) merged.phases.sprint.number = meta.current_sprint_number;
+                    if (meta.last_updated) merged.phases.sprint.lastUpdated = meta.last_updated;
+                    return merged;
+                });
+            }
+        });
+
+        return () => {
+            unsubscribeProject();
+            unsubscribeMetadata();
+        };
     }, [projectId]);
 
 

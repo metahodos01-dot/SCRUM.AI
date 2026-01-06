@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Project, SprintData, SprintStats } from '../../../types';
-import { serverTimestamp } from 'firebase/firestore';
+import { serverTimestamp, writeBatch, doc } from 'firebase/firestore';
+import { db } from '../../../firebase';
 
 interface SprintControlPanelProps {
     project: Project;
@@ -75,64 +76,90 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
         onUpdate(newProject);
     };
 
-    const handleEndSprint = () => {
+    const handleEndSprint = async () => {
         if (!confirm("Are you sure you want to end the Sprint? This will archive DONE items and reset others.")) return;
 
-        const newProject = JSON.parse(JSON.stringify(project)) as Project;
+        try {
+            const batch = writeBatch(db);
+            const projectRef = doc(db, 'projects', project.id);
+            const metaRef = doc(db, 'projects', project.id, 'metadata', 'sprint_config');
 
-        // 1. Process Stories (Clean Sync)
-        if (newProject.phases.backlog?.epics) {
-            newProject.phases.backlog.epics.forEach(epic => {
-                epic.stories.forEach(story => {
-                    if (story.isInSprint) {
-                        if (story.status.toLowerCase() === 'done') {
-                            // Archive: Remove from sprint view, keep as Done
-                            story.isInSprint = false;
-                            story.completedAt = serverTimestamp() as any;
-                        } else {
-                            // Return to Backlog: Remove from sprint, reset status
-                            story.isInSprint = false;
-                            story.status = 'todo';
+            const newProject = JSON.parse(JSON.stringify(project)) as Project;
+
+            // 1. Process Stories (Clean Sync)
+            if (newProject.phases.backlog?.epics) {
+                newProject.phases.backlog.epics.forEach(epic => {
+                    epic.stories.forEach(story => {
+                        if (story.isInSprint) {
+                            if (story.status.toLowerCase() === 'done') {
+                                // Archive: Remove from sprint view, keep as Done
+                                story.isInSprint = false;
+                                story.archived = true;
+                                story.sprintId = null; // Disconnect from sprint
+                                story.completedAt = serverTimestamp() as any;
+                            } else {
+                                // Return to Backlog: Remove from sprint, reset status
+                                story.isInSprint = false;
+                                story.status = 'todo';
+                                story.sprintId = null;
+                            }
                         }
-                    }
+                    });
                 });
+            }
+
+            const sprintStories = project.phases.backlog?.epics.flatMap(e => e.stories).filter(s => s.isInSprint) || [];
+            const completedStories = sprintStories.filter(s => s.status.toLowerCase() === 'done');
+
+            // 2. Metrics Capture
+            const velocity = completedStories.reduce((acc, s) => acc + s.storyPoints, 0);
+            const throughput = completedStories.length;
+            const leadTime = 0;
+
+            // 3. Save History & Reset
+            const history = newProject.phases.sprint.sprintHistory || [];
+            history.push({
+                number: project.phases.sprint.number,
+                velocity,
+                throughput,
+                startDate: project.phases.sprint.startDate,
+                endDate: new Date().toISOString(),
+                goal: project.phases.sprint.goal
             });
+
+            newProject.phases.sprint = {
+                ...newProject.phases.sprint,
+                isActive: false,
+                status: 'completed',
+                velocity,
+                throughput,
+                leadTime,
+                aiAlerts: [],
+                activeManualImpediments: [],
+                endDate: new Date().toISOString(),
+                sprintHistory: history,
+                lastUpdated: serverTimestamp() as any
+            };
+
+            // BATCH UPDATE: Project + Metadata
+            batch.set(projectRef, newProject, { merge: true });
+
+            // Increment Sprint Counter in Metadata (Source of Truth)
+            const nextSprintNumber = (project.phases.sprint.number || 0) + 1;
+            batch.set(metaRef, {
+                current_sprint_number: nextSprintNumber,
+                last_updated: serverTimestamp()
+            }, { merge: true });
+
+            await batch.commit();
+
+            // Local fallback update for immediate UI feedback (optional, assuming onSnapshot picks it up)
+            onUpdate(newProject);
+
+        } catch (error) {
+            console.error("Batch Sprint End Failed:", error);
+            alert("Crisis: Failed to end sprint. Check console.");
         }
-
-        const sprintStories = project.phases.backlog?.epics.flatMap(e => e.stories).filter(s => s.isInSprint) || [];
-        const completedStories = sprintStories.filter(s => s.status.toLowerCase() === 'done');
-
-        // 2. Metrics Capture (Persist in history before reset? Ideally we'd archive the whole sprint object)
-        const velocity = completedStories.reduce((acc, s) => acc + s.storyPoints, 0);
-        const throughput = completedStories.length;
-        const leadTime = 0; // Placeholder for future logic
-
-        // 3. Save History & Reset
-        const history = newProject.phases.sprint.sprintHistory || [];
-        history.push({
-            number: project.phases.sprint.number,
-            velocity,
-            throughput,
-            startDate: project.phases.sprint.startDate,
-            endDate: new Date().toISOString(),
-            goal: project.phases.sprint.goal
-        });
-
-        newProject.phases.sprint = {
-            ...newProject.phases.sprint,
-            isActive: false,
-            status: 'completed',
-            velocity,
-            throughput,
-            leadTime,
-            aiAlerts: [], // Clear alerts
-            activeManualImpediments: [],
-            endDate: new Date().toISOString(), // Set actual end date
-            sprintHistory: history,
-            lastUpdated: serverTimestamp() as any
-        };
-
-        onUpdate(newProject);
     };
 
     const handleReset = () => {
