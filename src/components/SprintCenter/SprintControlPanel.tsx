@@ -77,9 +77,11 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
     };
 
     const [errorLog, setErrorLog] = useState<string | null>(null);
+    const [successLog, setSuccessLog] = useState<string | null>(null);
 
     const handleEndSprint = async () => {
         setErrorLog(null); // Clear previous errors
+        setSuccessLog(null);
         if (!confirm("Are you sure you want to end the Sprint? This will archive DONE items and reset others.")) return;
 
         try {
@@ -175,6 +177,9 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
             await batch.commit();
 
             console.log("Sprint ended successfully via Batch.");
+            setSuccessLog(`Sprint #${currentSprintNumber} chiuso con successo!`);
+            // Clear success message after 5 seconds
+            setTimeout(() => setSuccessLog(null), 5000);
 
         } catch (error: any) {
             console.error("CRITICAL: Failed to end sprint via batch:", error);
@@ -199,13 +204,18 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
     };
 
     return (
-        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 backdrop-blur-sm mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-                <div className="flex flex-col">
-                    <span className="text-xs text-slate-400 uppercase font-bold tracking-wider">Sprint Status</span>
-                    <span className={`text-lg font-bold ${sprint.status === 'active' ? 'text-green-400 animate-pulse' : 'text-slate-100'}`}>
-                        {sprint.status?.toUpperCase() || 'PLANNING'}
-                    </span>
+        <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                        Sprint Control Center
+                    </h2>
+                    {sprint.isActive && (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                            <span className="text-xs font-medium text-emerald-400">ACTIVE: SPRINT {sprint.number}</span>
+                        </div>
+                    )}
                 </div>
 
                 {sprint.status === 'active' && (
