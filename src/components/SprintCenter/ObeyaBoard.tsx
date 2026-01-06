@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, UserStory } from '../../../types';
-import { auth } from '../../../firebase';
+import { auth, db } from '../../../firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 interface ObeyaBoardProps {
     project: Project;
@@ -8,8 +9,24 @@ interface ObeyaBoardProps {
 }
 
 const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project, onUpdate }) => {
-    // VISIBILITY FIX: Sprint Number Header
-    const current_sprint_number = project.phases.sprint?.number || 1;
+    // VISIBILITY FIX: Real-time Sprint Number
+    const [sprintNumber, setSprintNumber] = useState<number | string>('...');
+
+    useEffect(() => {
+        const metaRef = doc(db, 'projects', project.id, 'metadata', 'sprint_config');
+        const unsubscribe = onSnapshot(metaRef, (snapshot) => {
+            if (snapshot.exists()) {
+                setSprintNumber(snapshot.data().current_sprint_number);
+            } else {
+                // If doc doesn't exist yet, fallback to props but indicate uncertainty? 
+                // Or just show 1 as fallback default
+                setSprintNumber(project.phases.sprint?.number || 1);
+            }
+        });
+        return () => unsubscribe();
+    }, [project.id]);
+
+    const current_sprint_number = sprintNumber;
 
     // Helper to get all stories currently in the sprint
     const sprintStories = project.phases.backlog?.epics.flatMap(e => e.stories).filter(s => s.isInSprint) || [];
@@ -104,7 +121,7 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project, onUpdate }) => {
     return (
         <div className="h-full flex flex-col pt-6 relative">
             <div className="text-2xl font-bold text-blue-500 mb-4 px-6 flex items-center justify-between">
-                <span>SPRINT ATTUALE: #{current_sprint_number}</span>
+                <h1>Sprint Attuale: #{current_sprint_number}</h1>
             </div>
             <div className="flex-1 overflow-x-auto px-6 pb-6 relative">
                 {isUpdating && (

@@ -2,6 +2,8 @@
 // MonitoringHub.tsx - V3 (Problem Solving & Retrospective)
 import React, { useMemo, useState, useEffect } from 'react';
 import { Project } from '../../../types';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../../firebase';
 import { detectImpediments } from '../../utils/aiImpedimentDetector';
 
 interface MonitoringHubProps {
@@ -19,6 +21,21 @@ const CLASSIC_IMPEDIMENTS = [
 ];
 
 const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
+    // State for Real-Time Metadata
+    const [sprintMeta, setSprintMeta] = useState<{ current_sprint_number?: number, lastUpdated?: any }>({});
+
+    // Real-time listener for Sprint Metadata
+    useEffect(() => {
+        const metaRef = doc(db, 'projects', project.id, 'metadata', 'sprint_config');
+        const unsubscribe = onSnapshot(metaRef, (snapshot) => {
+            if (snapshot.exists()) {
+                setSprintMeta(snapshot.data());
+            }
+        });
+        return () => unsubscribe();
+    }, [project.id]);
+
+    // Keep alerts separate as before...
     // State for Retro Inputs (Local state before saving)
     const [retroInput, setRetroInput] = useState<{ good: string, bad: string, action: string }>({ good: '', bad: '', action: '' });
 
@@ -207,22 +224,22 @@ const MonitoringHub: React.FC<MonitoringHubProps> = ({ project, onUpdate }) => {
                         <span>📊</span> Statistics
                     </h3>
                     <div className="mb-4">
-                        <div className="text-2xl font-bold text-blue-500">SPRINT ATTUALE: #{project.phases.sprint?.number || 1}</div>
+                        <div className="text-2xl font-bold text-blue-500">SPRINT ATTUALE: #{sprintMeta.current_sprint_number || project.phases.sprint?.number || '-'}</div>
                     </div>
                     <div className="space-y-2 text-sm text-slate-400">
                         <div className="flex justify-between items-center">
                             <span>Current Sprint:</span>
-                            <span className="text-white font-bold bg-slate-700 px-2 py-0.5 rounded">#{project.phases.sprint?.number || 1}</span>
+                            <span className="text-white font-bold bg-slate-700 px-2 py-0.5 rounded">#{sprintMeta.current_sprint_number || project.phases.sprint?.number || '-'}</span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span>Last Update:</span>
                             <span className="text-emerald-400 font-mono text-xs flex items-center gap-1">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                {project.phases.sprint?.lastUpdated
-                                    ? (typeof project.phases.sprint.lastUpdated.toDate === 'function'
-                                        ? project.phases.sprint.lastUpdated.toDate().toLocaleTimeString()
-                                        : new Date(project.phases.sprint.lastUpdated).toLocaleTimeString())
-                                    : 'Syncing...'}
+                                {sprintMeta.lastUpdated
+                                    ? (sprintMeta.lastUpdated?.toDate
+                                        ? sprintMeta.lastUpdated.toDate().toLocaleTimeString()
+                                        : new Date(sprintMeta.lastUpdated).toLocaleTimeString())
+                                    : 'Sincronizzazione in corso...'}
                             </span>
                         </div>
 

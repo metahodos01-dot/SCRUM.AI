@@ -76,7 +76,10 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
         onUpdate(newProject);
     };
 
+    const [errorLog, setErrorLog] = useState<string | null>(null);
+
     const handleEndSprint = async () => {
+        setErrorLog(null); // Clear previous errors
         if (!confirm("Are you sure you want to end the Sprint? This will archive DONE items and reset others.")) return;
 
         try {
@@ -84,9 +87,16 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
             const projectRef = doc(db, 'projects', project.id);
             const metaRef = doc(db, 'projects', project.id, 'metadata', 'sprint_config');
 
+            // --- 1. Prepare Data (Memory) ---
             const newProject = JSON.parse(JSON.stringify(project)) as Project;
 
-            // 1. Process Stories (Clean Sync)
+            // Get current sprint number safely
+            const currentSprintNumber = newProject.phases.sprint.number || 1;
+
+            let completedStoriesCount = 0;
+            let totalVelocity = 0;
+
+            // Process Monolithic Project Data
             if (newProject.phases.backlog?.epics) {
                 newProject.phases.backlog.epics.forEach(epic => {
                     epic.stories.forEach(story => {
@@ -95,12 +105,15 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
                                 // Archive: Remove from sprint view, keep as Done
                                 story.isInSprint = false;
                                 story.archived = true;
-                                story.sprintId = null; // Disconnect from sprint
-                                story.completedAt = serverTimestamp() as any;
+                                story.sprintId = null;
+                                story.completedAt = new Date().toISOString() as any;
+
+                                completedStoriesCount++;
+                                totalVelocity += (story.storyPoints || 0);
                             } else {
-                                // Return to Backlog: Remove from sprint, reset status
+                                // Return to Backlog
                                 story.isInSprint = false;
-                                story.status = 'todo';
+                                story.status = 'backlog' as any;
                                 story.sprintId = null;
                             }
                         }
@@ -108,23 +121,19 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
                 });
             }
 
-            const sprintStories = project.phases.backlog?.epics.flatMap(e => e.stories).filter(s => s.isInSprint) || [];
-            const completedStories = sprintStories.filter(s => s.status.toLowerCase() === 'done');
+            // Metrics
+            const throughput = completedStoriesCount;
+            const velocity = totalVelocity;
 
-            // 2. Metrics Capture
-            const velocity = completedStories.reduce((acc, s) => acc + s.storyPoints, 0);
-            const throughput = completedStories.length;
-            const leadTime = 0;
-
-            // 3. Save History & Reset
+            // Save History & Reset Sprint State
             const history = newProject.phases.sprint.sprintHistory || [];
             history.push({
-                number: project.phases.sprint.number,
+                number: currentSprintNumber,
                 velocity,
                 throughput,
-                startDate: project.phases.sprint.startDate,
+                startDate: newProject.phases.sprint.startDate,
                 endDate: new Date().toISOString(),
-                goal: project.phases.sprint.goal
+                goal: newProject.phases.sprint.goal
             });
 
             newProject.phases.sprint = {
@@ -133,7 +142,7 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
                 status: 'completed',
                 velocity,
                 throughput,
-                leadTime,
+                leadTime: 0,
                 aiAlerts: [],
                 activeManualImpediments: [],
                 endDate: new Date().toISOString(),
@@ -141,24 +150,30 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
                 lastUpdated: serverTimestamp() as any
             };
 
-            // BATCH UPDATE: Project + Metadata
+            // --- 2. Build Batch ---
+            // Operation 1: Update the monolith project document
             batch.set(projectRef, newProject, { merge: true });
 
-            // Increment Sprint Counter in Metadata (Source of Truth)
-            const nextSprintNumber = (project.phases.sprint.number || 0) + 1;
+            // Operation 2: Update Metadata (Source of Truth)
+            // We use increment(1) if possible, but reading first is safer for sync if we relied on doc read.
+            // Since we are not doing a transaction read, we rely on the project's current number + 1 or logical increment.
+            // NOTE: Ideally we'd use FieldValue.increment(1) but for now direct set is fine for this context.
             batch.set(metaRef, {
-                current_sprint_number: nextSprintNumber,
-                last_updated: serverTimestamp()
+                current_sprint_number: currentSprintNumber + 1,
+                lastUpdated: serverTimestamp(),
+                status: "PLANNING"
             }, { merge: true });
 
+            // --- 3. Commit ---
             await batch.commit();
 
-            // Local fallback update for immediate UI feedback (optional, assuming onSnapshot picks it up)
-            onUpdate(newProject);
+            console.log("Sprint ended successfully via Batch.");
 
-        } catch (error) {
-            console.error("Batch Sprint End Failed:", error);
-            alert("Crisis: Failed to end sprint. Check console.");
+        } catch (error: any) {
+            console.error("CRITICAL: Failed to end sprint via batch:", error);
+            const msg = error.message || JSON.stringify(error);
+            setErrorLog(`FAILED: ${msg}`);
+            alert(`Crisis: Failed to end sprint.\n\nError: ${msg}`);
         }
     };
 
@@ -253,12 +268,19 @@ const SprintControlPanel: React.FC<SprintControlPanelProps> = ({ project, onUpda
                 )}
 
                 {sprint.status === 'active' && (
-                    <button
-                        onClick={handleEndSprint}
-                        className="bg-red-600/80 hover:bg-red-500 text-white px-6 py-2 rounded-lg font-bold transition-all shadow-lg flex items-center gap-2"
-                    >
-                        🏁 End Sprint
-                    </button>
+                    <div className="flex flex-col items-end gap-1">
+                        <button
+                            onClick={handleEndSprint}
+                            className="bg-red-600/80 hover:bg-red-500 text-white px-6 py-2 rounded-lg font-bold transition-all shadow-lg flex items-center gap-2"
+                        >
+                            🏁 End Sprint
+                        </button>
+                        {errorLog && (
+                            <span className="text-red-400 font-bold bg-slate-900 border border-red-500 px-2 py-1 rounded text-xs animate-pulse">
+                                Error: {errorLog}
+                            </span>
+                        )}
+                    </div>
                 )}
 
                 {sprint.status === 'completed' && (
