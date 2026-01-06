@@ -289,7 +289,8 @@ const ObeyaBoard: React.FC<ObeyaBoardProps> = ({ project, onUpdate }) => {
                     ))}
                 </div>
             </div>
-            );
+        </div>
+    );
 };
 
-            export default ObeyaBoard;
+export default ObeyaBoard;
